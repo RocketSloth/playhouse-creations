@@ -29,7 +29,7 @@ const products = [
     description:
       "A modern geometric vase with intricate patterns. Perfect for displaying small plants or dried flowers.",
     price: 29.99,
-    image: "/placeholder.svg?height=300&width=300", // Will be replaced with actual image
+    image: "/products/geometric-vase/image-1.webp",
     category: "Household",
     isNew: true,
     isFeatured: true,
@@ -50,7 +50,7 @@ const products = [
     name: "Enfit Wrench Set",
     description: "A set of five high-quality 3D printed wrenches for tube feeding management.",
     price: 10.0,
-    image: "/placeholder.svg?height=300&width=300&text=Enfit+Wrench+Set",
+    image: "/products/enfit-wrench/image-1.webp",
     category: "Medical",
     isNew: true,
     isFeatured: true,
@@ -85,7 +85,7 @@ export default function FeaturedProducts() {
               src={product.image || "/placeholder.svg?height=300&width=300"}
               alt={product.name}
               fill
-              className="object-cover transition-transform duration-300 hover:scale-105"
+              className="object-contain p-2"
             />
             {product.isNew && <Badge className="absolute top-2 right-2 bg-purple-600">New</Badge>}
           </div>
