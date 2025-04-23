@@ -32,7 +32,7 @@ const product = {
     "/products/enfit-wrench/image-2.webp",
     "/products/enfit-wrench/image-3.webp",
     "/products/enfit-wrench/image-4.webp",
-    "/products/enfit-wrench/image-5.webp",
+//    "/products/enfit-wrench/image-5.webp",
   ],
   category: "Medical",
   isNew: true,
@@ -64,7 +64,7 @@ const reviews = [
     name: "Sarah Johnson",
     avatar: "/placeholder.svg?height=80&width=80",
     rating: 5,
-    date: "March 15, 2023",
+    date: "March 15, 2025",
     text: "These Enfit wrenches have been a game-changer for my daughter's tube feeding routine. The color options are great - we got one in each color so we can keep them in different locations around the house. They're durable and provide the perfect grip.",
   },
   {
@@ -72,7 +72,7 @@ const reviews = [
     name: "Michael Thompson",
     avatar: "/placeholder.svg?height=80&width=80",
     rating: 5,
-    date: "April 2, 2023",
+    date: "April 2, 2025",
     text: "As a caregiver, I've struggled with Enfit connections for years. These wrenches make it so much easier! The blue ones match our medical supplies bag perfectly. Will definitely order more for backup.",
   },
   {
@@ -80,7 +80,7 @@ const reviews = [
     name: "Lisa Rodriguez",
     avatar: "/placeholder.svg?height=80&width=80",
     rating: 4,
-    date: "May 10, 2023",
+    date: "May 10, 2025",
     text: "Great quality and very functional. The only reason I'm giving 4 stars instead of 5 is that I wish they came with a storage case. Otherwise, they're perfect for our needs!",
   },
 ]
@@ -117,7 +117,7 @@ export default function ProductPage() {
     "/products/enfit-wrench/image-2.webp",
     "/products/enfit-wrench/image-3.webp",
     "/products/enfit-wrench/image-4.webp",
-    "/products/enfit-wrench/image-5.webp",
+//    "/products/enfit-wrench/image-5.webp",
   ]
 
   return (
@@ -155,7 +155,7 @@ export default function ProductPage() {
           <div className="space-y-4">
             <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800">
               <Image
-                src={productImages[activeImage] || "/placeholder.svg"}
+                src={productImages[activeImage] || "/logo.svg"}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -172,7 +172,7 @@ export default function ProductPage() {
                   onClick={() => setActiveImage(index)}
                 >
                   <Image
-                    src={image || "/placeholder.svg"}
+                    src={image || "/logo.svg"}
                     alt={`${product.name} view ${index + 1}`}
                     fill
                     className="object-cover"
@@ -342,7 +342,7 @@ export default function ProductPage() {
                       <div className="flex items-center gap-4 mb-2">
                         <div className="relative h-10 w-10 rounded-full overflow-hidden">
                           <Image
-                            src={review.avatar || "/placeholder.svg"}
+                            src={review.avatar || "/logo.svg"}
                             alt={review.name}
                             fill
                             className="object-cover"
@@ -402,7 +402,7 @@ export default function ProductPage() {
             <Card className="bg-gray-900 border-gray-800 overflow-hidden">
               <div className="relative aspect-square">
                 <Image
-                  src="/placeholder.svg?height=300&width=300&text=Related+Product"
+                  src="/logo.svg?height=300&width=300&text=Related+Product"
                   alt="Related Product"
                   fill
                   className="object-cover transition-transform duration-300 hover:scale-105"
@@ -420,7 +420,7 @@ export default function ProductPage() {
             <Card className="bg-gray-900 border-gray-800 overflow-hidden">
               <div className="relative aspect-square">
                 <Image
-                  src="/placeholder.svg?height=300&width=300&text=Related+Product"
+                  src="/logo.svg?height=300&width=300&text=Related+Product"
                   alt="Related Product"
                   fill
                   className="object-cover transition-transform duration-300 hover:scale-105"
