@@ -31,6 +31,8 @@ const product = {
     "/products/enfit-wrench/image-1.webp",
     "/products/enfit-wrench/image-2.webp",
     "/products/enfit-wrench/image-3.webp",
+    "/products/enfit-wrench/image-4.webp",
+    "/products/enfit-wrench/image-5.webp",
   ],
   category: "Medical",
   isNew: true,
@@ -111,9 +113,11 @@ export default function ProductPage() {
 
   // Use placeholder images for now
   const productImages = [
-    "/placeholder.svg?height=600&width=600&text=Enfit+Wrench+Set",
-    "/placeholder.svg?height=600&width=600&text=Enfit+Wrench+Close+Up",
-    "/placeholder.svg?height=600&width=600&text=Enfit+Wrench+In+Use",
+    "/products/enfit-wrench/image-1.webp",
+    "/products/enfit-wrench/image-2.webp",
+    "/products/enfit-wrench/image-3.webp",
+    "/products/enfit-wrench/image-4.webp",
+    "/products/enfit-wrench/image-5.webp",
   ]
 
   return (
