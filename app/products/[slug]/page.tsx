@@ -52,8 +52,8 @@ const productsData = [
       "A modern geometric vase with intricate patterns. Perfect for displaying small plants or dried flowers.",
     price: 29.99,
     images: [
-      "/placeholder.svg?height=600&width=600", // Will be replaced with actual images
-      "/placeholder.svg?height=600&width=600",
+      "/products/geometric-vase/image-1.webp",
+      "/products/geometric-vase/image-2.webp",
     ],
     category: "Household",
     isNew: true,
@@ -279,20 +279,20 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800">
+            <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800 max-w-md mx-auto">
               <Image
                 src={product.images[activeImage] || "/placeholder.svg?height=600&width=600"}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
               />
               {product.isNew && <Badge className="absolute top-2 right-2 bg-purple-600">New</Badge>}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-center">
               {product.images.map((image: string, index: number) => (
                 <button
                   key={index}
-                  className={`relative w-20 h-20 rounded-md overflow-hidden border ${
+                  className={`relative w-16 h-16 rounded-md overflow-hidden border ${
                     activeImage === index ? "border-purple-500" : "border-gray-800"
                   }`}
                   onClick={() => setActiveImage(index)}
@@ -301,7 +301,7 @@ export default function ProductPage() {
                     src={image || "/placeholder.svg"}
                     alt={`${product.name} view ${index + 1}`}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </button>
               ))}

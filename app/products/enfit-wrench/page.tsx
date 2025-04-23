@@ -32,7 +32,6 @@ const product = {
     "/products/enfit-wrench/image-2.webp",
     "/products/enfit-wrench/image-3.webp",
     "/products/enfit-wrench/image-4.webp",
-//    "/products/enfit-wrench/image-5.webp",
   ],
   category: "Medical",
   isNew: true,
@@ -117,7 +116,6 @@ export default function ProductPage() {
     "/products/enfit-wrench/image-2.webp",
     "/products/enfit-wrench/image-3.webp",
     "/products/enfit-wrench/image-4.webp",
-//    "/products/enfit-wrench/image-5.webp",
   ]
 
   return (
@@ -153,20 +151,20 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800">
+            <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800 max-w-md mx-auto">
               <Image
                 src={productImages[activeImage] || "/logo.svg"}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
               />
               {product.isNew && <Badge className="absolute top-2 right-2 bg-purple-600">New</Badge>}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-center">
               {productImages.map((image, index) => (
                 <button
                   key={index}
-                  className={`relative w-20 h-20 rounded-md overflow-hidden border ${
+                  className={`relative w-16 h-16 rounded-md overflow-hidden border ${
                     activeImage === index ? "border-purple-500" : "border-gray-800"
                   }`}
                   onClick={() => setActiveImage(index)}
@@ -175,7 +173,7 @@ export default function ProductPage() {
                     src={image || "/logo.svg"}
                     alt={`${product.name} view ${index + 1}`}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </button>
               ))}
