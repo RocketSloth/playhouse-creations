@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail } from "lucide-react"
 
 export default function ContactPage() {
   return (
@@ -16,8 +16,8 @@ export default function ContactPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <Card className="bg-gray-900 border-gray-800">
+          <div className="flex justify-center mb-12">
+            <Card className="bg-gray-900 border-gray-800 max-w-md w-full">
               <CardContent className="pt-6 text-center">
                 <Mail className="h-10 w-10 text-purple-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Email</h3>
@@ -26,22 +26,6 @@ export default function ContactPage() {
                     Designs@PLAyhousecreations.com
                   </a>
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="pt-6 text-center">
-                <Phone className="h-10 w-10 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Phone</h3>
-                <p className="text-gray-300">(555) 123-4567</p>
-                <p className="text-sm text-gray-400">Mon-Fri, 9am-5pm EST</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="pt-6 text-center">
-                <MapPin className="h-10 w-10 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Location</h3>
-                <p className="text-gray-300">123 Print Street</p>
-                <p className="text-gray-300">Designville, CA 12345</p>
               </CardContent>
             </Card>
           </div>

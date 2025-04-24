@@ -35,9 +35,11 @@ export default function Home() {
                   Shop Collection <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
+              {/* About link temporarily hidden
               <Button asChild variant="outline" size="lg" className="border-gray-700 text-gray-300 hover:bg-gray-800">
                 <Link href="/about">Learn More</Link>
               </Button>
+              */}
             </div>
           </div>
         </div>

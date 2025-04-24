@@ -61,11 +61,13 @@ export default function Footer() {
           <div>
             <h3 className="mb-4 text-lg font-semibold text-white">Information</h3>
             <ul className="space-y-2">
+              {/* About link temporarily hidden
               <li>
                 <Link href="/about" className="hover:text-purple-400">
                   About Us
                 </Link>
               </li>
+              */}
               <li>
                 <Link href="/contact" className="hover:text-purple-400">
                   Contact Us

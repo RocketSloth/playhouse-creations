@@ -69,15 +69,6 @@ export default function Navbar() {
                   Categories
                 </Link>
                 <Link
-                  href="/about"
-                  className={cn(
-                    "hover:text-purple-400 transition-colors",
-                    pathname === "/about" ? "text-purple-400" : "text-gray-100",
-                  )}
-                >
-                  About
-                </Link>
-                <Link
                   href="/contact"
                   className={cn(
                     "hover:text-purple-400 transition-colors",
@@ -151,11 +142,6 @@ export default function Navbar() {
                   </li>
                 </ul>
               </NavigationMenuContent>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link href="/about" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>About</NavigationMenuLink>
-              </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <Link href="/contact" legacyBehavior passHref>

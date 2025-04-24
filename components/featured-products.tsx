@@ -16,8 +16,8 @@ const products = [
     slug: "asthma-inhaler-case",
     name: "Asthma Inhaler Case",
     description: "A durable, protective case designed to securely hold and organize multiple asthma inhalers.",
-    price: 25.0,
-    image: "/placeholder.svg?height=300&width=300", // Will be replaced with actual image
+    price: 9.99,
+    image: "/products/asthma-inhaler-case/image-1.webp",
     category: "Medical",
     isNew: true,
     isFeatured: true,
@@ -32,16 +32,6 @@ const products = [
     image: "/products/geometric-vase/image-1.webp",
     category: "Household",
     isNew: true,
-    isFeatured: true,
-  },
-  {
-    id: 3,
-    name: "Phone Stand",
-    description: "Ergonomic phone stand with cable management",
-    price: 19.99,
-    image: "/placeholder.svg?height=300&width=300",
-    category: "Gadgets",
-    isNew: false,
     isFeatured: true,
   },
   {
