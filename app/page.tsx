@@ -15,6 +15,8 @@ export default function Home() {
             src="/products/backgrounds/colorful-gears.webp"
             alt="Colorful 3D Printed Gears"
             fill
+            quality={100}
+            sizes="100vw"
             className="object-cover opacity-40"
             priority
           />
