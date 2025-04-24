@@ -12,8 +12,8 @@ export default function Home() {
       <section className="relative h-[80vh] flex items-center">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/products/geometric-vase/image-1.webp"
-            alt="3D Printing Hero"
+            src="/products/backgrounds/colorful-gears.webp"
+            alt="Colorful 3D Printed Gears"
             fill
             className="object-cover opacity-40"
             priority
