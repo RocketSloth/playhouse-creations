@@ -11,26 +11,29 @@ import {
   SheetDescription, 
   SheetFooter, 
   SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
+  SheetTitle
 } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Minus, Plus, ShoppingCart, ClipboardList } from "lucide-react"
 import { useCart } from "@/components/cart-provider"
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 
-export default function CartDrawer() {
+interface CartDrawerProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export default function CartDrawer({ open, setOpen }: CartDrawerProps) {
   const { cartItems, updateCartItem, removeCartItem, subtotal } = useCart()
-  const [isOpen, setIsOpen] = useState(false)
 
   // Close sheet when escape key is pressed
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false)
+      if (e.key === "Escape") setOpen(false)
     }
     window.addEventListener("keydown", handleEscape)
     return () => window.removeEventListener("keydown", handleEscape)
-  }, [])
+  }, [setOpen])
 
   // Update cart count badge
   useEffect(() => {
@@ -44,22 +47,7 @@ export default function CartDrawer() {
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="relative border-0 bg-transparent hover:bg-gray-800"
-          aria-label="Open cart"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          {cartItems.length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-xs text-white">
-              {cartItems.reduce((total, item) => total + item.quantity, 0)}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className="w-full sm:max-w-md border-l border-gray-800 bg-gray-900 pr-0 text-gray-100">
         <SheetHeader className="px-1 text-left">
           <SheetTitle className="text-gray-100">Your Cart</SheetTitle>
@@ -153,7 +141,7 @@ export default function CartDrawer() {
                 <Button 
                   asChild 
                   className="w-full bg-purple-600 hover:bg-purple-700"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setOpen(false)}
                 >
                   <Link href="/request">
                     <ClipboardList className="mr-2 h-4 w-4" />
@@ -176,7 +164,7 @@ export default function CartDrawer() {
             <Button 
               asChild 
               className="mt-4 bg-purple-600 hover:bg-purple-700"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setOpen(false)}
             >
               <Link href="/products">
                 Continue Shopping

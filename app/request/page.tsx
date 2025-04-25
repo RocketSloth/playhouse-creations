@@ -39,12 +39,35 @@ export default function OrderRequestPage() {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate form submission
-    setTimeout(() => {
+    // Send request to API endpoint
+    fetch('/api/send-request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...formData,
+        cartItems,
+        subtotal
+      }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        setRequestComplete(true)
+        clearCart()
+      } else {
+        // Handle error
+        alert(data.error || 'Failed to submit request. Please try again.')
+      }
+    })
+    .catch(error => {
+      console.error('Error submitting request:', error)
+      alert('Failed to submit request. Please try again.')
+    })
+    .finally(() => {
       setIsSubmitting(false)
-      setRequestComplete(true)
-      clearCart()
-    }, 1000)
+    })
   }
 
   if (requestComplete) {
