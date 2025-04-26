@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       </tr>`
     ).join('');
 
-    const storeEmailAddress = process.env.STORE_EMAIL || 'Design@playcreations.com';
+    const storeEmailAddress = process.env.STORE_EMAIL || 'Designs@playhousecreations.com';
     console.log(`Sending order details to store email: ${storeEmailAddress}`);
 
     // Email to store
