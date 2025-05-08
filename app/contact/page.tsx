@@ -34,19 +34,18 @@ export default function ContactPage() {
         },
         body: JSON.stringify({
           firstName: formData.name.split(' ')[0],
-          lastName: formData.name.split(' ').slice(1).join(' '),
+          lastName: formData.name.split(' ').slice(1).join(' ') || 'N/A',
           email: formData.email,
           message: `Subject: ${formData.subject}\n\n${formData.message}`,
           cartItems: [] // Empty array since this is a contact form
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send message')
-      }
-
       const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message')
+      }
 
       if (data.success) {
         toast.success('Message sent successfully! We will get back to you soon.')

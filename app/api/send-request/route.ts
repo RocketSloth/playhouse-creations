@@ -7,8 +7,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { firstName, lastName, email, phone, address, city, state, zip, message, preferredContact, cartItems, subtotal } = body;
 
+    // Debug logging
+    console.log('Received request body:', body);
+    console.log('Required fields:', {
+      firstName: !!firstName,
+      lastName: !!lastName,
+      email: !!email
+    });
+
     // Validate required fields
     if (!firstName || !lastName || !email) {
+      console.log('Validation failed:', {
+        firstName: firstName || 'missing',
+        lastName: lastName || 'missing',
+        email: email || 'missing'
+      });
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
