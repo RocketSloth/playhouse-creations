@@ -1,9 +1,49 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Facebook, Instagram, Twitter } from "lucide-react"
+import { toast } from "sonner"
 
 export default function Footer() {
+  const [email, setEmail] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to subscribe')
+      }
+
+      if (data.success) {
+        toast.success('Successfully subscribed to newsletter!')
+        setEmail("")
+      } else {
+        toast.error(data.error || 'Failed to subscribe. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error subscribing:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to subscribe. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <footer className="border-t border-gray-800 bg-gray-950 text-gray-300">
       <div className="container mx-auto px-4 py-12 md:px-6">
@@ -98,14 +138,27 @@ export default function Footer() {
                 Designs@PLAyhousecreations.com
               </a>
             </p>
-            <div className="flex flex-col space-y-2">
+            <form onSubmit={handleSubscribe} className="flex flex-col space-y-2">
               <Input
                 type="email"
                 placeholder="Your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="bg-gray-900 border-gray-800 focus-visible:ring-purple-500"
               />
-              <Button className="bg-purple-600 hover:bg-purple-700">Subscribe</Button>
-            </div>
+              <Button 
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {isSubmitting ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  "Subscribe"
+                )}
+              </Button>
+            </form>
           </div>
         </div>
         <div className="mt-12 border-t border-gray-800 pt-8 text-center">
