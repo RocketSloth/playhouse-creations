@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { firstName, lastName, email, phone, address, city, state, zip, message, preferredContact, cartItems, subtotal } = body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !cartItems) {
+    if (!firstName || !lastName || !email) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -46,32 +46,26 @@ export async function POST(request: Request) {
     const requestNumber = `REQ-${Math.floor(100000 + Math.random() * 900000)}`;
     console.log(`Generated request number: ${requestNumber}`);
 
-    // Format cart items for email
-    const cartItemsList = cartItems.map((item: CartItem) => 
-      `<tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${item.price.toFixed(2)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${(item.price * item.quantity).toFixed(2)}</td>
-      </tr>`
-    ).join('');
-
     const storeEmailAddress = process.env.STORE_EMAIL || 'Designs@playhousecreations.com';
     console.log(`Sending order details to store email: ${storeEmailAddress}`);
+
+    // Determine if this is a contact form submission or an order request
+    const isContactForm = !cartItems || cartItems.length === 0;
 
     // Email to store
     const storeEmail = {
       from: `"PLAyhouse Creations" <${process.env.EMAIL_FROM || 'noreply@playcreations.com'}>`,
       to: storeEmailAddress,
-      subject: `New Order Request: ${requestNumber}`,
+      subject: isContactForm ? `New Contact Form Submission: ${requestNumber}` : `New Order Request: ${requestNumber}`,
       html: `
-        <h2>New Order Request: ${requestNumber}</h2>
+        <h2>${isContactForm ? 'New Contact Form Submission' : 'New Order Request'}: ${requestNumber}</h2>
         <p><strong>From:</strong> ${firstName} ${lastName}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Preferred Contact Method:</strong> ${preferredContact}</p>
-        <p><strong>Address:</strong> ${address}, ${city}, ${state} ${zip}</p>
+        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
+        ${preferredContact ? `<p><strong>Preferred Contact Method:</strong> ${preferredContact}</p>` : ''}
+        ${address ? `<p><strong>Address:</strong> ${address}, ${city}, ${state} ${zip}</p>` : ''}
         
+        ${!isContactForm ? `
         <h3>Order Details:</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr style="background-color: #f2f2f2;">
@@ -80,14 +74,22 @@ export async function POST(request: Request) {
             <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Price</th>
             <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total</th>
           </tr>
-          ${cartItemsList}
+          ${cartItems.map((item: CartItem) => 
+            `<tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${item.price.toFixed(2)}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${(item.price * item.quantity).toFixed(2)}</td>
+            </tr>`
+          ).join('')}
           <tr>
             <td colspan="3" style="padding: 8px; text-align: right;"><strong>Subtotal:</strong></td>
             <td style="padding: 8px;"><strong>$${subtotal.toFixed(2)}</strong></td>
           </tr>
         </table>
+        ` : ''}
         
-        <h3>Additional Message:</h3>
+        <h3>Message:</h3>
         <p>${message || 'No additional message provided.'}</p>
       `,
     };
@@ -96,17 +98,18 @@ export async function POST(request: Request) {
     const customerEmail = {
       from: `"PLAyhouse Creations" <${process.env.EMAIL_FROM || 'noreply@playcreations.com'}>`,
       to: email,
-      subject: `Your Order Request Confirmation: ${requestNumber}`,
+      subject: isContactForm ? `Your Message Received: ${requestNumber}` : `Your Order Request Confirmation: ${requestNumber}`,
       html: `
-        <h2>Thank you for your order request!</h2>
-        <p>We have received your request (${requestNumber}) and will get back to you within 1-2 business days with pricing and availability.</p>
+        <h2>${isContactForm ? 'Thank you for contacting us!' : 'Thank you for your order request!'}</h2>
+        <p>We have received your ${isContactForm ? 'message' : 'request'} (${requestNumber}) and will get back to you within 1-2 business days.</p>
         
-        <h3>Your Request Details:</h3>
+        <h3>Your Details:</h3>
         <p><strong>Name:</strong> ${firstName} ${lastName}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Address:</strong> ${address}, ${city}, ${state} ${zip}</p>
+        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
+        ${address ? `<p><strong>Address:</strong> ${address}, ${city}, ${state} ${zip}</p>` : ''}
         
+        ${!isContactForm ? `
         <h3>Order Summary:</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr style="background-color: #f2f2f2;">
@@ -115,7 +118,14 @@ export async function POST(request: Request) {
             <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Price</th>
             <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Total</th>
           </tr>
-          ${cartItemsList}
+          ${cartItems.map((item: CartItem) => 
+            `<tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${item.price.toFixed(2)}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${(item.price * item.quantity).toFixed(2)}</td>
+            </tr>`
+          ).join('')}
           <tr>
             <td colspan="3" style="padding: 8px; text-align: right;"><strong>Subtotal:</strong></td>
             <td style="padding: 8px;"><strong>$${subtotal.toFixed(2)}</strong></td>
@@ -123,6 +133,7 @@ export async function POST(request: Request) {
         </table>
         
         <p>Please note: This is a request only. We will contact you with final pricing, shipping costs, and payment options after reviewing your request.</p>
+        ` : ''}
         
         <p>If you have any questions, please reply to this email or contact us at ${storeEmailAddress}.</p>
         

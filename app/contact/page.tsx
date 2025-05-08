@@ -41,6 +41,11 @@ export default function ContactPage() {
         }),
       })
 
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
+      }
+
       const data = await response.json()
 
       if (data.success) {
@@ -56,7 +61,7 @@ export default function ContactPage() {
       }
     } catch (error) {
       console.error('Error sending message:', error)
-      toast.error('Failed to send message. Please try again.')
+      toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
