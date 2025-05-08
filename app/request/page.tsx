@@ -17,6 +17,7 @@ export default function OrderRequestPage() {
   const { cartItems, subtotal, clearCart } = useCart()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [requestComplete, setRequestComplete] = useState(false)
+  const [requestNumber, setRequestNumber] = useState("")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -54,6 +55,7 @@ export default function OrderRequestPage() {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
+        setRequestNumber(data.requestNumber)
         setRequestComplete(true)
         clearCart()
       } else {
@@ -86,7 +88,7 @@ export default function OrderRequestPage() {
                 Thank you for your order request with PLAyhouse Creations. We've received your request and will get back to you within 1-2 business days with pricing and availability.
               </p>
               <p>
-                Request #: <span className="font-medium">REQ-{Math.floor(100000 + Math.random() * 900000)}</span>
+                Request #: <span className="font-medium">{requestNumber}</span>
               </p>
               <p>A confirmation email has been sent to {formData.email}.</p>
             </CardContent>
