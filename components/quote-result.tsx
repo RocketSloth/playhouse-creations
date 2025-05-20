@@ -4,7 +4,7 @@ import { Download, Printer, Clock, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { Quote } from "@/lib/supabase"
+import type { Quote } from "@/app/actions"
 import { useState, useEffect } from "react"
 import { getMaterials, getRegions, getFinishes } from "@/app/actions"
 

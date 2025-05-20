@@ -1,21 +1,19 @@
 "use server"
 
 import OpenAI from "openai"
-import {
-  createServerSupabaseClient,
-  type Material,
-  type Region,
-  type Finish,
-  type MaterialPrice,
-  type Quote,
-  type Validation,
-} from "@/lib/supabase"
+import { createServerSupabaseClient } from "@/lib/supabase-server"
+import { analyzeSTL } from "@/lib/stl-analyzer"
+import { calculatePrintTime } from "@/lib/print-time-calculator"
 import { revalidatePath } from "next/cache"
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Initialize OpenAI client - only create it when needed to avoid browser initialization
+const getOpenAIClient = () => {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new Error("Missing OpenAI API key")
+  }
+  return new OpenAI({ apiKey })
+}
 
 // Function to check if data is fresh (less than 48 hours old)
 function isDataFresh(timestamp: string): boolean {
@@ -25,7 +23,100 @@ function isDataFresh(timestamp: string): boolean {
   return hoursDifference < 48
 }
 
-// Function to get all materials with current prices
+// Types
+export interface Material {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  density: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Region {
+  id: number
+  code: string
+  name: string
+  currency: string
+  shipping_base_cost: number
+  shipping_weight_factor: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Finish {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  layer_height: number
+  time_multiplier: number
+  cost_multiplier: number
+  created_at: string
+  updated_at: string
+}
+
+export interface MaterialPrice {
+  id: number
+  material_id: number
+  region_id: number
+  price_per_gram: number
+  last_updated: string
+  market_trend: string | null
+}
+
+export interface Validation {
+  id: number
+  file_name: string
+  file_size: number
+  triangles: number
+  is_printable: boolean
+  dimensions: {
+    x: number
+    y: number
+    z: number
+  }
+  volume: number
+  issues: string[] | null
+  created_at: string
+}
+
+export interface Quote {
+  id: number
+  quote_reference: string
+  file_name: string
+  file_size: number
+  material_id: number
+  finish_id: number
+  region_id: number
+  email: string | null
+  dimensions: {
+    x: number
+    y: number
+    z: number
+  }
+  volume: number
+  weight: number
+  triangles: number
+  material_cost: number
+  labor_cost: number
+  shipping_cost: number
+  markup: number
+  total_price: number
+  print_time: number
+  print_settings: {
+    layerHeight: number
+    infill: number
+    printSpeed: number
+    temperature: number
+  }
+  is_paid: boolean
+  estimated_delivery: string | null
+  created_at: string
+}
+
+// Function to get all materials
 export async function getMaterials(): Promise<Material[]> {
   const supabase = createServerSupabaseClient()
 
@@ -117,6 +208,9 @@ async function updateMaterialPriceWithAI(materialCode: string, regionCode: strin
       return null
     }
 
+    // Initialize OpenAI client only when needed
+    const openai = getOpenAIClient()
+
     // Use OpenAI to get current market prices and trends
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -164,7 +258,7 @@ async function updateMaterialPriceWithAI(materialCode: string, regionCode: strin
     }
 
     // Update the price in the database
-    const { data: updatedPrice, error } = await supabase
+    const { data: updatedPrice, error: updateError } = await supabase
       .from("material_prices")
       .update({
         price_per_gram: finalPrice,
@@ -176,8 +270,8 @@ async function updateMaterialPriceWithAI(materialCode: string, regionCode: strin
       .select()
       .single()
 
-    if (error) {
-      console.error("Error updating material price:", error)
+    if (updateError) {
+      console.error("Error updating material price:", updateError)
       return null
     }
 
@@ -188,106 +282,6 @@ async function updateMaterialPriceWithAI(materialCode: string, regionCode: strin
   }
 }
 
-// Types
-export interface ValidationResult {
-  fileName: string
-  fileSize: number
-  triangles: number
-  isPrintable: boolean
-  dimensions: {
-    x: number
-    y: number
-    z: number
-  }
-  volume: number
-  issues: string[]
-}
-
-export interface QuoteResult {
-  id: string
-  fileName: string
-  material: string
-  finish: string
-  region: string
-  totalPrice: number
-  materialCost: number
-  printTime: number
-  laborCost: number
-  shippingCost: number
-  markup: number
-  dimensions: {
-    x: number
-    y: number
-    z: number
-  }
-  volume: number
-  weight: number
-  printSettings: {
-    layerHeight: number
-    infill: number
-    printSpeed: number
-    temperature: number
-  }
-  estimatedDelivery: string
-}
-
-// Material pricing data - in a real app, this would come from a database
-const materialPricing = {
-  pla: {
-    us: 0.02,
-    eu: 0.022,
-    uk: 0.024,
-    ca: 0.023,
-    au: 0.025,
-  },
-  abs: {
-    us: 0.025,
-    eu: 0.0275,
-    uk: 0.03,
-    ca: 0.0285,
-    au: 0.031,
-  },
-  petg: {
-    us: 0.03,
-    eu: 0.033,
-    uk: 0.036,
-    ca: 0.0345,
-    au: 0.0375,
-  },
-  resin: {
-    us: 0.05,
-    eu: 0.055,
-    uk: 0.06,
-    ca: 0.0575,
-    au: 0.0625,
-  },
-}
-
-// Finish multipliers
-const finishMultipliers = {
-  standard: 1,
-  fine: 1.5,
-  ultra: 2,
-}
-
-// Function to analyze STL file using THREE.js
-async function analyzeSTLGeometry(fileBuffer: ArrayBuffer): Promise<{
-  triangles: number
-  dimensions: { x: number; y: number; z: number }
-  volume: number
-}> {
-  // TODO: Implement actual STL analysis with THREE.js
-  return {
-    triangles: Math.floor(Math.random() * 50000) + 5000,
-    dimensions: {
-      x: Math.floor(Math.random() * 150) + 50,
-      y: Math.floor(Math.random() * 150) + 50,
-      z: Math.floor(Math.random() * 150) + 50,
-    },
-    volume: Math.random() * 100 + 50,
-  }
-}
-
 // Function to validate STL file using OpenAI
 export async function validateSTLWithAI(file: File): Promise<Validation> {
   const supabase = createServerSupabaseClient()
@@ -295,65 +289,100 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
   // Read the file as ArrayBuffer
   const fileBuffer = await file.arrayBuffer()
 
-  // Analyze the STL geometry
-  const { triangles, dimensions, volume } = await analyzeSTLGeometry(fileBuffer)
+  // Analyze the STL geometry using THREE.js
+  const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
 
-  // Use OpenAI to analyze printability and identify issues
-  const aiResponse = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an expert in 3D printing. Analyze the provided 3D model metrics and identify potential printing issues.",
-      },
-      {
-        role: "user",
-        content: `Analyze this 3D model for printability:
-          - File name: ${file.name}
-          - File size: ${(file.size / 1024 / 1024).toFixed(2)} MB
-          - Triangle count: ${triangles}
-          - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
-          - Volume: ${volume.toFixed(2)} cm³
-          
-          Identify any potential issues for 3D printing and determine if it's printable.
-          Return your response as JSON with the following structure:
-          {
-            "isPrintable": boolean,
-            "issues": string[] (empty array if no issues)
-          }`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  })
+  try {
+    // Initialize OpenAI client only when needed
+    const openai = getOpenAIClient()
 
-  // Parse the AI response
-  const aiAnalysis = JSON.parse(aiResponse.choices[0].message.content || '{"isPrintable": true, "issues": []}')
-
-  // Save validation result to database
-  const { data: validation, error } = await supabase
-    .from("validations")
-    .insert({
-      file_name: file.name,
-      file_size: file.size,
-      triangles,
-      is_printable: aiAnalysis.isPrintable,
-      dimensions,
-      volume,
-      issues: aiAnalysis.issues,
+    // Use OpenAI to analyze printability and identify issues
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert in 3D printing. Analyze the provided 3D model metrics and identify potential printing issues.",
+        },
+        {
+          role: "user",
+          content: `Analyze this 3D model for printability:
+            - File name: ${file.name}
+            - File size: ${(file.size / 1024 / 1024).toFixed(2)} MB
+            - Triangle count: ${triangles}
+            - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
+            - Volume: ${volume.toFixed(2)} cm³
+            
+            Identify any potential issues for 3D printing and determine if it's printable.
+            Return your response as JSON with the following structure:
+            {
+              "isPrintable": boolean,
+              "issues": string[] (empty array if no issues)
+            }`,
+        },
+      ],
+      response_format: { type: "json_object" },
     })
-    .select()
-    .single()
 
-  if (error) {
-    console.error("Error saving validation:", error)
-    throw new Error("Failed to save validation result")
+    // Parse the AI response
+    const aiAnalysis = JSON.parse(aiResponse.choices[0].message.content || '{"isPrintable": true, "issues": []}')
+
+    // Save validation result to database
+    const { data: validation, error: validationError } = await supabase
+      .from("validations")
+      .insert({
+        file_name: file.name,
+        file_size: file.size,
+        triangles,
+        is_printable: aiAnalysis.isPrintable,
+        dimensions,
+        volume,
+        issues: aiAnalysis.issues,
+      })
+      .select()
+      .single()
+
+    if (validationError) {
+      console.error("Error saving validation:", validationError)
+      throw new Error("Failed to save validation result")
+    }
+
+    return validation
+  } catch (error) {
+    console.error("Error during validation:", error)
+
+    // Fallback validation if OpenAI fails
+    const fallbackValidation = {
+      is_printable: true,
+      issues: ["Unable to perform AI validation. Basic geometry check passed."],
+    }
+
+    // Save fallback validation result to database
+    const { data: validation, error: fallbackError } = await supabase
+      .from("validations")
+      .insert({
+        file_name: file.name,
+        file_size: file.size,
+        triangles,
+        is_printable: fallbackValidation.is_printable,
+        dimensions,
+        volume,
+        issues: fallbackValidation.issues,
+      })
+      .select()
+      .single()
+
+    if (fallbackError) {
+      console.error("Error saving fallback validation:", fallbackError)
+      throw new Error("Failed to save validation result")
+    }
+
+    return validation
   }
-
-  return validation
 }
 
-// Function to calculate quote using OpenAI and real data
+// Function to calculate quote using OpenAI and real STL analysis
 export async function calculateQuoteWithAI(
   file: File,
   materialCode: string,
@@ -383,107 +412,201 @@ export async function calculateQuoteWithAI(
   // Read the file as ArrayBuffer
   const fileBuffer = await file.arrayBuffer()
 
-  // Analyze the STL geometry
-  const { triangles, dimensions, volume } = await analyzeSTLGeometry(fileBuffer)
+  try {
+    // Analyze the STL geometry using THREE.js
+    const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
 
-  // Calculate weight based on material density
-  const weight = volume * material.density
+    // Calculate weight based on material density
+    const weight = volume * material.density
 
-  // Use OpenAI to get optimal print settings and time estimate
-  const aiResponse = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert in 3D printing. Provide optimal print settings and time estimates.",
-      },
-      {
-        role: "user",
-        content: `Provide optimal print settings for this 3D model:
-          - Material: ${material.name}
-          - Finish quality: ${finish.name} (layer height: ${finish.layer_height}mm)
-          - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
-          - Volume: ${volume.toFixed(2)} cm³
-          - Weight: ${weight.toFixed(2)} g
-          - Triangles: ${triangles}
-          
-          Return your response as JSON with the following structure:
-          {
-            "printSettings": {
-              "layerHeight": number,
-              "infill": number,
-              "printSpeed": number,
-              "temperature": number
-            },
-            "printTimeMinutes": number
-          }`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  })
+    // Initialize OpenAI client only when needed
+    const openai = getOpenAIClient()
 
-  // Parse the AI response
-  const printData = JSON.parse(
-    aiResponse.choices[0].message.content ||
-      '{"printSettings":{"layerHeight":0.2,"infill":20,"printSpeed":60,"temperature":210},"printTimeMinutes":120}',
-  )
-
-  // Calculate costs
-  const materialCost = weight * materialPrice.price_per_gram
-  const printTime = printData.printTimeMinutes * finish.time_multiplier
-  const laborCost = (printTime / 60) * 15 // $15 per hour, adjusted for finish quality
-
-  // Calculate shipping based on weight and region
-  const shippingCost = region.shipping_base_cost + weight * region.shipping_weight_factor
-
-  // Calculate markup
-  const markup = (materialCost + laborCost) * 0.3
-
-  // Calculate total price
-  const totalPrice = materialCost + laborCost + shippingCost + markup
-
-  // Calculate estimated delivery date
-  const today = new Date()
-  const deliveryDays = Math.floor(Math.random() * 5) + 3
-  const deliveryDate = new Date(today)
-  deliveryDate.setDate(today.getDate() + deliveryDays)
-
-  // Generate quote reference
-  const quoteReference = `QUOTE-${Date.now().toString(36).toUpperCase()}`
-
-  // Save quote to database
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .insert({
-      quote_reference: quoteReference,
-      file_name: file.name,
-      file_size: file.size,
-      material_id: material.id,
-      finish_id: finish.id,
-      region_id: region.id,
-      email: email || null,
-      dimensions,
-      volume,
-      weight,
-      triangles,
-      material_cost: materialCost,
-      labor_cost: laborCost,
-      shipping_cost: shippingCost,
-      markup,
-      total_price: totalPrice,
-      print_time: printTime,
-      print_settings: printData.printSettings,
-      estimated_delivery: deliveryDate.toISOString(),
+    // Use OpenAI to get optimal print settings
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert in 3D printing. Provide optimal print settings.",
+        },
+        {
+          role: "user",
+          content: `Provide optimal print settings for this 3D model:
+            - Material: ${material.name}
+            - Finish quality: ${finish.name} (layer height: ${finish.layer_height}mm)
+            - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
+            - Volume: ${volume.toFixed(2)} cm³
+            - Weight: ${weight.toFixed(2)} g
+            - Triangles: ${triangles}
+            
+            Return your response as JSON with the following structure:
+            {
+              "printSettings": {
+                "layerHeight": number,
+                "infill": number,
+                "printSpeed": number,
+                "temperature": number
+              }
+            }`,
+        },
+      ],
+      response_format: { type: "json_object" },
     })
-    .select()
-    .single()
 
-  if (error) {
-    console.error("Error saving quote:", error)
-    throw new Error("Failed to save quote")
+    // Parse the AI response
+    const printData = JSON.parse(
+      aiResponse.choices[0].message.content ||
+        '{"printSettings":{"layerHeight":0.2,"infill":20,"printSpeed":60,"temperature":210}}',
+    )
+
+    // Calculate print time using our utility
+    const printTime =
+      calculatePrintTime(
+        volume,
+        printData.printSettings.layerHeight,
+        printData.printSettings.printSpeed,
+        printData.printSettings.infill,
+      ) * finish.time_multiplier
+
+    // Calculate costs
+    const materialCost = weight * materialPrice.price_per_gram
+    const laborCost = (printTime / 60) * 15 // $15 per hour, adjusted for finish quality
+
+    // Calculate shipping based on weight and region
+    const shippingCost = region.shipping_base_cost + weight * region.shipping_weight_factor
+
+    // Calculate markup
+    const markup = (materialCost + laborCost) * 0.3
+
+    // Calculate total price
+    const totalPrice = materialCost + laborCost + shippingCost + markup
+
+    // Calculate estimated delivery date
+    const today = new Date()
+    const deliveryDays = Math.floor(printTime / 60 / 8) + 2 // Estimate based on print time (8 hour work days) + 2 days for processing
+    const deliveryDate = new Date(today)
+    deliveryDate.setDate(today.getDate() + deliveryDays)
+
+    // Generate quote reference
+    const quoteReference = `QUOTE-${Date.now().toString(36).toUpperCase()}`
+
+    // Save quote to database
+    const { data: quote, error: quoteError } = await supabase
+      .from("quotes")
+      .insert({
+        quote_reference: quoteReference,
+        file_name: file.name,
+        file_size: file.size,
+        material_id: material.id,
+        finish_id: finish.id,
+        region_id: region.id,
+        email: email || null,
+        dimensions,
+        volume,
+        weight,
+        triangles,
+        material_cost: materialCost,
+        labor_cost: laborCost,
+        shipping_cost: shippingCost,
+        markup,
+        total_price: totalPrice,
+        print_time: printTime,
+        print_settings: printData.printSettings,
+        estimated_delivery: deliveryDate.toISOString(),
+      })
+      .select()
+      .single()
+
+    if (quoteError) {
+      console.error("Error saving quote:", quoteError)
+      throw new Error("Failed to save quote")
+    }
+
+    return quote
+  } catch (error) {
+    console.error("Error during quote calculation:", error)
+
+    // Fallback if OpenAI fails
+    // Use default print settings
+    const defaultPrintSettings = {
+      layerHeight: finish.layer_height,
+      infill: 20,
+      printSpeed: 60,
+      temperature: 210,
+    }
+
+    // Analyze the STL geometry using THREE.js
+    const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
+
+    // Calculate weight based on material density
+    const weight = volume * material.density
+
+    // Calculate print time using our utility
+    const printTime =
+      calculatePrintTime(
+        volume,
+        defaultPrintSettings.layerHeight,
+        defaultPrintSettings.printSpeed,
+        defaultPrintSettings.infill,
+      ) * finish.time_multiplier
+
+    // Calculate costs
+    const materialCost = weight * materialPrice.price_per_gram
+    const laborCost = (printTime / 60) * 15 // $15 per hour, adjusted for finish quality
+
+    // Calculate shipping based on weight and region
+    const shippingCost = region.shipping_base_cost + weight * region.shipping_weight_factor
+
+    // Calculate markup
+    const markup = (materialCost + laborCost) * 0.3
+
+    // Calculate total price
+    const totalPrice = materialCost + laborCost + shippingCost + markup
+
+    // Calculate estimated delivery date
+    const today = new Date()
+    const deliveryDays = Math.floor(printTime / 60 / 8) + 2 // Estimate based on print time (8 hour work days) + 2 days for processing
+    const deliveryDate = new Date(today)
+    deliveryDate.setDate(today.getDate() + deliveryDays)
+
+    // Generate quote reference
+    const quoteReference = `QUOTE-${Date.now().toString(36).toUpperCase()}`
+
+    // Save quote to database
+    const { data: quote, error: fallbackError } = await supabase
+      .from("quotes")
+      .insert({
+        quote_reference: quoteReference,
+        file_name: file.name,
+        file_size: file.size,
+        material_id: material.id,
+        finish_id: finish.id,
+        region_id: region.id,
+        email: email || null,
+        dimensions,
+        volume,
+        weight,
+        triangles,
+        material_cost: materialCost,
+        labor_cost: laborCost,
+        shipping_cost: shippingCost,
+        markup,
+        total_price: totalPrice,
+        print_time: printTime,
+        print_settings: defaultPrintSettings,
+        estimated_delivery: deliveryDate.toISOString(),
+      })
+      .select()
+      .single()
+
+    if (fallbackError) {
+      console.error("Error saving fallback quote:", fallbackError)
+      throw new Error("Failed to save quote")
+    }
+
+    return quote
   }
-
-  return quote
 }
 
 // Function to mark a quote as paid

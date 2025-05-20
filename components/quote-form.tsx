@@ -13,7 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { validateSTLWithAI, calculateQuoteWithAI, getMaterials, getRegions, getFinishes } from "@/app/actions"
 import { PaymentForm } from "@/components/payment-form"
 import { QuoteResult } from "@/components/quote-result"
-import type { Material, Region, Finish, Validation, Quote } from "@/lib/supabase"
+import type { Material, Region, Finish, Validation, Quote } from "@/app/actions"
+import dynamic from "next/dynamic"
+
+// Dynamically import STLPreview with no SSR to avoid THREE.js server-side issues
+const STLPreview = dynamic(() => import("@/components/stl-preview").then((mod) => ({ default: mod.STLPreview })), {
+  ssr: false,
+  loading: () => <div className="w-full h-64 flex items-center justify-center bg-gray-100">Loading 3D preview...</div>,
+})
 
 export default function QuoteForm() {
   const [file, setFile] = useState<File | null>(null)
@@ -204,6 +211,14 @@ export default function QuoteForm() {
                         <AlertTitle>Error</AlertTitle>
                         <AlertDescription>{fileError}</AlertDescription>
                       </Alert>
+                    )}
+
+                    {/* Add STL Preview */}
+                    {file && file.name.toLowerCase().endsWith(".stl") && (
+                      <div className="mt-4">
+                        <Label>3D Preview</Label>
+                        <STLPreview file={file} />
+                      </div>
                     )}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
