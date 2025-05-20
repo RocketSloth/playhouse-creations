@@ -16,8 +16,8 @@ import { QuoteResult } from "@/components/quote-result"
 import type { Material, Region, Finish, Validation, Quote } from "@/app/actions"
 import dynamic from "next/dynamic"
 
-// Dynamically import STLPreview with no SSR to avoid THREE.js server-side issues
-const STLPreview = dynamic(() => import("@/components/stl-preview").then((mod) => ({ default: mod.STLPreview })), {
+// Dynamically import STLPreview with no SSR
+const STLPreview = dynamic(() => import("@/components/stl-preview"), {
   ssr: false,
   loading: () => <div className="w-full h-64 flex items-center justify-center bg-gray-100">Loading 3D preview...</div>,
 })
@@ -35,6 +35,7 @@ export default function QuoteForm() {
   const [isCalculating, setIsCalculating] = useState<boolean>(false)
   const [isPaid, setIsPaid] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<string>("quote")
+  const [showPreview, setShowPreview] = useState<boolean>(false)
 
   // State for dynamic data
   const [materials, setMaterials] = useState<Material[]>([])
@@ -69,6 +70,7 @@ export default function QuoteForm() {
     const selectedFile = e.target.files?.[0]
     setFileError(null)
     setValidationResult(null)
+    setShowPreview(false)
 
     if (!selectedFile) {
       return
@@ -84,6 +86,12 @@ export default function QuoteForm() {
     }
 
     setFile(selectedFile)
+
+    // Only show preview for STL files
+    if (selectedFile.name.toLowerCase().endsWith(".stl")) {
+      // Delay showing preview to ensure scripts have time to load
+      setTimeout(() => setShowPreview(true), 500)
+    }
   }
 
   const handleValidate = async () => {
@@ -214,7 +222,7 @@ export default function QuoteForm() {
                     )}
 
                     {/* Add STL Preview */}
-                    {file && file.name.toLowerCase().endsWith(".stl") && (
+                    {file && file.name.toLowerCase().endsWith(".stl") && showPreview && (
                       <div className="mt-4">
                         <Label>3D Preview</Label>
                         <STLPreview file={file} />
