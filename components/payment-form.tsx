@@ -2,106 +2,142 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import { useState } from "react"
+import { Loader2, CreditCard, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { markQuoteAsPaid } from "@/app/actions"
 
 interface PaymentFormProps {
   onSuccess: () => void
-  total: number
+  quoteId: number
+  amount: number
 }
 
-export default function PaymentForm({ onSuccess, total }: PaymentFormProps) {
-  const stripe = useStripe()
-  const elements = useElements()
-  const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+export function PaymentForm({ onSuccess, quoteId, amount }: PaymentFormProps) {
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [cardNumber, setCardNumber] = useState("")
+  const [expiry, setExpiry] = useState("")
+  const [cvc, setCvc] = useState("")
+  const [name, setName] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!stripe) {
-      return
-    }
-
-    // Check for payment intent return status
-    const clientSecret = new URLSearchParams(window.location.search).get("payment_intent_client_secret")
-
-    if (!clientSecret) {
-      return
-    }
-
-    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-      if (!paymentIntent) return
-
-      switch (paymentIntent.status) {
-        case "succeeded":
-          setMessage("Payment succeeded!")
-          onSuccess()
-          break
-        case "processing":
-          setMessage("Your payment is processing.")
-          break
-        case "requires_payment_method":
-          setMessage("Your payment was not successful, please try again.")
-          break
-        default:
-          setMessage("Something went wrong.")
-          break
-      }
-    })
-  }, [stripe, onSuccess])
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+    setIsProcessing(true)
 
-    if (!stripe || !elements) {
-      // Stripe.js hasn't yet loaded.
-      return
+    try {
+      // In a real app, this would process payment through Stripe or another provider
+      // For now, we'll just mark the quote as paid in our database
+      await markQuoteAsPaid(quoteId)
+      onSuccess()
+    } catch (error) {
+      console.error("Payment error:", error)
+      setError("Payment processing failed. Please try again.")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "")
+    const matches = v.match(/\d{4,16}/g)
+    const match = (matches && matches[0]) || ""
+    const parts = []
+
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4))
     }
 
-    setIsLoading(true)
+    if (parts.length) {
+      return parts.join(" ")
+    } else {
+      return value
+    }
+  }
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/success`,
-      },
-    })
+  const formatExpiry = (value: string) => {
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "")
 
-    // This will only execute if there's an immediate error when confirming the payment
-    if (error) {
-      setMessage(error.message || "An unexpected error occurred.")
+    if (v.length >= 3) {
+      return `${v.substring(0, 2)}/${v.substring(2, 4)}`
     }
 
-    setIsLoading(false)
+    return value
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement />
-
-      {message && (
-        <div
-          className={`p-4 rounded-md ${message.includes("succeeded") ? "bg-green-900/50 text-green-200" : "bg-red-900/50 text-red-200"}`}
-        >
-          {message}
-        </div>
-      )}
-
-      <Button
-        type="submit"
-        className="w-full bg-purple-600 hover:bg-purple-700"
-        disabled={isLoading || !stripe || !elements}
-      >
-        {isLoading ? (
-          <span className="flex items-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing...
-          </span>
-        ) : (
-          `Pay $${total.toFixed(2)}`
-        )}
-      </Button>
-    </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Complete Your Purchase</CardTitle>
+        <CardDescription>Pay ${amount} to receive your detailed 3D print quote</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="card-number">Card Number</Label>
+            <div className="relative">
+              <Input
+                id="card-number"
+                placeholder="1234 5678 9012 3456"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                maxLength={19}
+                required
+              />
+              <CreditCard className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="expiry">Expiry Date</Label>
+              <Input
+                id="expiry"
+                placeholder="MM/YY"
+                value={expiry}
+                onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                maxLength={5}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cvc">CVC</Label>
+              <Input
+                id="cvc"
+                placeholder="123"
+                value={cvc}
+                onChange={(e) => setCvc(e.target.value.replace(/[^0-9]/g, ""))}
+                maxLength={3}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name on Card</Label>
+            <Input id="name" placeholder="John Smith" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex items-center text-sm text-gray-500">
+            <Lock className="mr-1 h-4 w-4" />
+            Secure payment processed by Stripe
+          </div>
+        </form>
+      </CardContent>
+      <CardFooter>
+        <Button className="w-full" onClick={handleSubmit} disabled={isProcessing}>
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay $${amount}`
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }

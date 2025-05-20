@@ -1,168 +1,29 @@
-"use client"
-
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Facebook, Instagram, Twitter } from "lucide-react"
-import { toast } from "sonner"
+import { Mail } from "lucide-react"
 
 export default function Footer() {
-  const [email, setEmail] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const response = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to subscribe')
-      }
-
-      if (data.success) {
-        toast.success('Successfully subscribed to newsletter!')
-        setEmail("")
-      } else {
-        toast.error(data.error || 'Failed to subscribe. Please try again.')
-      }
-    } catch (error) {
-      console.error('Error subscribing:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to subscribe. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   return (
-    <footer className="border-t border-gray-800 bg-gray-950 text-gray-300">
-      <div className="container mx-auto px-4 py-12 md:px-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <h3 className="mb-4 text-lg font-semibold text-white">PLAyhouse Creations</h3>
-            <p className="mb-4">
-              Premium quality 3D printed creations, custom designs, and unique collectibles from PLAyhouse Creations.
+    <footer className="w-full border-t bg-gray-100">
+      <div className="container px-4 md:px-6 py-12">
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">3D Print Quoter</h3>
+            <p className="text-gray-500">
+              Get instant, accurate quotes for your 3D printing projects. Upload your file, select your options, and get
+              a detailed price breakdown in seconds.
             </p>
-            <div className="flex space-x-4">
-              <Button variant="ghost" size="icon" className="hover:text-purple-400">
-                <Facebook className="h-5 w-5" />
-                <span className="sr-only">Facebook</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:text-purple-400">
-                <Instagram className="h-5 w-5" />
-                <span className="sr-only">Instagram</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:text-purple-400">
-                <Twitter className="h-5 w-5" />
-                <span className="sr-only">Twitter</span>
-              </Button>
-            </div>
           </div>
-          <div>
-            <h3 className="mb-4 text-lg font-semibold text-white">Shop</h3>
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">Contact Us</h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/products" className="hover:text-purple-400">
-                  All Products
-                </Link>
-              </li>
-              <li>
-                <Link href="/categories/figurines" className="hover:text-purple-400">
-                  Figurines
-                </Link>
-              </li>
-              <li>
-                <Link href="/categories/home-decor" className="hover:text-purple-400">
-                  Home Decor
-                </Link>
-              </li>
-              <li>
-                <Link href="/categories/gadgets" className="hover:text-purple-400">
-                  Gadgets
-                </Link>
-              </li>
-              <li>
-                <Link href="/custom-orders" className="hover:text-purple-400">
-                  Custom Orders
-                </Link>
+              <li className="flex items-start">
+                <Mail className="mr-2 h-5 w-5 text-gray-500" />
+                <span className="text-gray-500">support@3dprintquoter.com</span>
               </li>
             </ul>
-          </div>
-          <div>
-            <h3 className="mb-4 text-lg font-semibold text-white">Information</h3>
-            <ul className="space-y-2">
-              {/* About link temporarily hidden
-              <li>
-                <Link href="/about" className="hover:text-purple-400">
-                  About Us
-                </Link>
-              </li>
-              */}
-              <li>
-                <Link href="/contact" className="hover:text-purple-400">
-                  Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="hover:text-purple-400">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link href="/shipping" className="hover:text-purple-400">
-                  Shipping & Returns
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:text-purple-400">
-                  Privacy Policy
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="mb-4 text-lg font-semibold text-white">Newsletter</h3>
-            <p className="mb-4">
-              Subscribe to get special offers and updates on new products. Contact us at{" "}
-              <a href="mailto:Designs@PLAyhousecreations.com" className="text-purple-400 hover:underline">
-                Designs@PLAyhousecreations.com
-              </a>
-            </p>
-            <form onSubmit={handleSubscribe} className="flex flex-col space-y-2">
-              <Input
-                type="email"
-                placeholder="Your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-gray-900 border-gray-800 focus-visible:ring-purple-500"
-              />
-              <Button 
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {isSubmitting ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  "Subscribe"
-                )}
-              </Button>
-            </form>
           </div>
         </div>
-        <div className="mt-12 border-t border-gray-800 pt-8 text-center">
-          <p>&copy; {new Date().getFullYear()} PLAyhouse Creations. All rights reserved.</p>
+        <div className="mt-8 border-t pt-8">
+          <p className="text-center text-gray-500">© 2025 3D Print Quoter. All rights reserved.</p>
         </div>
       </div>
     </footer>
