@@ -290,6 +290,7 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
   const fileBuffer = await file.arrayBuffer()
 
   // Analyze the STL geometry using THREE.js
+  // This will return placeholder data on the server
   const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
 
   try {
@@ -414,6 +415,7 @@ export async function calculateQuoteWithAI(
 
   try {
     // Analyze the STL geometry using THREE.js
+    // This will return placeholder data on the server
     const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
 
     // Calculate weight based on material density
@@ -537,6 +539,7 @@ export async function calculateQuoteWithAI(
     }
 
     // Analyze the STL geometry using THREE.js
+    // This will return placeholder data on the server
     const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
 
     // Calculate weight based on material density

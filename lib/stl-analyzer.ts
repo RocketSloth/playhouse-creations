@@ -11,7 +11,7 @@ export interface STLAnalysisResult {
 // Function to analyze STL file and return geometry information
 export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisResult> {
   // For server-side rendering or environments where THREE.js isn't available,
-  // return a placeholder result
+  // always return a placeholder result when running on the server
   if (typeof window === "undefined") {
     console.warn("THREE.js analysis not available in server environment, using placeholder data")
     return {
@@ -22,10 +22,9 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
   }
 
   try {
-    // Wait for THREE.js to be loaded from CDN
+    // Check if THREE.js is loaded globally
     if (!window.THREE || !window.STLLoader) {
-      // If THREE.js is not loaded yet, return placeholder data
-      console.warn("THREE.js not loaded yet, using placeholder data")
+      console.warn("THREE.js not loaded globally, using placeholder data")
       return {
         triangles: 1000,
         dimensions: { x: 100, y: 100, z: 100 },
@@ -102,4 +101,13 @@ function calculateVolume(geometry: any, THREE: any): number {
 // Calculate signed volume of tetrahedron
 function signedVolumeOfTriangle(p1: any, p2: any, p3: any): number {
   return p1.dot(p2.cross(p3)) / 6.0
+}
+
+// Add type definitions for global THREE objects
+declare global {
+  interface Window {
+    THREE: any
+    STLLoader: any
+    OrbitControls: any
+  }
 }
