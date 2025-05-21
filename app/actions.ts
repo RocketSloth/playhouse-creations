@@ -472,6 +472,11 @@ export async function calculateQuoteWithAI(
       volume: 50,
       surfaceArea: 200,
     }
+
+    // Log detailed error for debugging
+    if (error instanceof Error) {
+      console.warn(`STL analysis failed with message: ${error.message}`)
+    }
   }
 
   const { triangles, dimensions, volume, surfaceArea } = stlAnalysis

@@ -171,8 +171,15 @@ export default function QuoteForm() {
       setQuote(quoteResult)
     } catch (error) {
       console.error("Quote calculation error:", error)
-      setFileError("Error calculating quote. Please try again.")
-      setApiError("Server error during quote calculation. Please try again later.")
+
+      // Check for specific STL parsing errors
+      if (error instanceof Error && error.message.includes("STL")) {
+        setFileError(`Error processing your 3D model: ${error.message}. Please try a different file.`)
+      } else {
+        setFileError("Error calculating quote. Please try again.")
+      }
+
+      setApiError("There was a problem processing your file. Please try a different STL file or contact support.")
     } finally {
       setIsCalculating(false)
     }

@@ -34,12 +34,25 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
     // Try to detect if ASCII or Binary STL
     const headerView = new Uint8Array(fileBuffer, 0, 80)
     const headerString = new TextDecoder().decode(headerView)
-    const isAscii = headerString.trim().toLowerCase().startsWith("solid")
 
-    if (isAscii && !isBinarySTL(fileBuffer)) {
-      return parseAsciiSTL(fileBuffer)
-    } else {
+    // First try binary parsing, as it's more common and faster
+    try {
       return parseBinarySTL(fileBuffer)
+    } catch (binaryError) {
+      console.warn("Binary STL parsing failed, trying ASCII format:", binaryError)
+
+      // If binary parsing fails and the file starts with "solid", try ASCII
+      if (headerString.trim().toLowerCase().startsWith("solid")) {
+        try {
+          return parseAsciiSTL(fileBuffer)
+        } catch (asciiError) {
+          console.error("ASCII STL parsing also failed:", asciiError)
+          throw new Error("Failed to parse STL file in either binary or ASCII format")
+        }
+      } else {
+        // If it doesn't start with "solid" and binary parsing failed, it's likely corrupted
+        throw new Error("Invalid or corrupted STL file")
+      }
     }
   } catch (error) {
     console.error("Error analyzing STL:", error)
@@ -50,31 +63,6 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
       volume: 50,
       surfaceArea: 200,
     }
-  }
-}
-
-// Function to check if a file is actually binary STL despite having "solid" in the header
-// Some software writes binary STL files with "solid" in the header
-function isBinarySTL(fileBuffer: ArrayBuffer): boolean {
-  // If file is too small to be binary STL, it's not binary
-  if (fileBuffer.byteLength < 84) {
-    return false
-  }
-
-  try {
-    const view = new DataView(fileBuffer)
-    const triangleCount = view.getUint32(80, true)
-
-    // Check if file size matches what we'd expect for binary STL
-    const expectedSize = 84 + triangleCount * 50
-
-    // Allow for some tolerance in file size
-    const sizeMatches = Math.abs(fileBuffer.byteLength - expectedSize) < 100
-
-    // If triangle count is reasonable and size matches, it's likely binary
-    return triangleCount > 0 && triangleCount < 5000000 && sizeMatches
-  } catch (error) {
-    return false
   }
 }
 
@@ -170,19 +158,14 @@ function parseAsciiSTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
       vertices.push([Number.parseFloat(match[1]), Number.parseFloat(match[2]), Number.parseFloat(match[3])])
     }
 
-    if (vertices.length % 3 !== 0 || vertices.length === 0) {
-      throw new Error("Failed to parse ASCII STL: invalid vertex count")
+    if (vertices.length === 0) {
+      throw new Error("No vertices found in ASCII STL")
     }
 
     return computeAnalysisFromTriangles(vertices)
   } catch (error) {
     console.error("Error parsing ASCII STL:", error)
-    return {
-      triangles: 1000,
-      dimensions: { x: 100, y: 100, z: 100 },
-      volume: 50,
-      surfaceArea: 200,
-    }
+    throw error
   }
 }
 
@@ -196,24 +179,45 @@ function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
       throw new Error("Binary STL file too small")
     }
 
+    // Read triangle count (4 bytes at offset 80)
     const triangleCount = view.getUint32(80, true)
 
-    // Validate triangle count - a reasonable upper limit
-    if (triangleCount > 5000000 || triangleCount <= 0) {
-      throw new Error("Invalid triangle count in binary STL")
+    // More relaxed validation for triangle count
+    // Some STL files might have incorrect counts but still be valid
+    if (triangleCount <= 0) {
+      throw new Error("Invalid triangle count in binary STL: count is zero or negative")
+    }
+
+    // Upper limit check - extremely large values are likely errors
+    // 10 million triangles is a reasonable upper limit for most use cases
+    if (triangleCount > 10000000) {
+      console.warn(`Very large triangle count detected: ${triangleCount}. This might be an error.`)
     }
 
     // Calculate expected file size based on triangle count
     const expectedSize = 84 + triangleCount * 50
 
-    // Check if file size matches expected size
-    if (fileBuffer.byteLength < expectedSize) {
-      throw new Error("File size doesn't match expected size for binary STL")
+    // Check if file size is at least close to what we'd expect
+    // Allow for some flexibility - some files might have extra data
+    if (fileBuffer.byteLength < 84 + 12) {
+      // At least header + 1 triangle's vertices
+      throw new Error("File too small to contain any triangles")
+    }
+
+    // If file is much smaller than expected, adjust triangle count
+    const actualMaxTriangles = Math.floor((fileBuffer.byteLength - 84) / 50)
+    const effectiveTriangleCount = Math.min(triangleCount, actualMaxTriangles)
+
+    if (effectiveTriangleCount < triangleCount) {
+      console.warn(
+        `STL file claims ${triangleCount} triangles but can only contain ${effectiveTriangleCount} based on file size`,
+      )
     }
 
     const vertices: number[][] = []
 
-    for (let i = 0; i < triangleCount; i++) {
+    // Read only as many triangles as the file can actually contain
+    for (let i = 0; i < effectiveTriangleCount; i++) {
       const offset = 84 + i * 50
 
       // Ensure we don't go out of bounds
@@ -221,7 +225,7 @@ function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
         break
       }
 
-      // 12 bytes: normal, next 36 bytes: 3 vertices
+      // Skip normal (12 bytes), read 3 vertices (36 bytes)
       for (let v = 0; v < 3; v++) {
         const base = offset + 12 + v * 12
 
@@ -239,7 +243,7 @@ function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
           if (isFinite(x) && isFinite(y) && isFinite(z)) {
             vertices.push([x, y, z])
           } else {
-            throw new Error("Invalid vertex data in binary STL")
+            console.warn("Non-finite vertex coordinates found, skipping triangle")
           }
         } catch (e) {
           console.warn("Error reading vertex data:", e)
@@ -249,18 +253,13 @@ function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
       // skip 2-byte attribute at the end
     }
 
-    if (vertices.length % 3 !== 0 || vertices.length === 0) {
-      throw new Error("Failed to parse binary STL: invalid vertex count")
+    if (vertices.length === 0) {
+      throw new Error("No valid vertices found in binary STL")
     }
 
     return computeAnalysisFromTriangles(vertices)
   } catch (error) {
     console.error("Error parsing binary STL:", error)
-    return {
-      triangles: 1000,
-      dimensions: { x: 100, y: 100, z: 100 },
-      volume: 50,
-      surfaceArea: 200,
-    }
+    throw error
   }
 }
