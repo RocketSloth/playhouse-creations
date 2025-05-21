@@ -15,6 +15,17 @@ const getOpenAIClient = () => {
   return new OpenAI({ apiKey })
 }
 
+// Function to safely parse JSON
+function safeJsonParse(jsonString: string | null | undefined, fallback: any): any {
+  if (!jsonString) return fallback
+  try {
+    return JSON.parse(jsonString)
+  } catch (error) {
+    console.error("Error parsing JSON:", error)
+    return fallback
+  }
+}
+
 // Function to check if data is fresh (less than 48 hours old)
 function isDataFresh(timestamp: string): boolean {
   const dataTime = new Date(timestamp).getTime()
@@ -235,9 +246,8 @@ async function updateMaterialPriceWithAI(materialCode: string, regionCode: strin
     })
 
     // Parse the AI response
-    const priceData = JSON.parse(
-      aiResponse.choices[0].message.content || '{"pricePerGram": 0.03, "marketTrend": "Stable pricing"}',
-    )
+    const responseContent = aiResponse.choices[0].message.content
+    const priceData = safeJsonParse(responseContent, { pricePerGram: 0.03, marketTrend: "Stable pricing" })
 
     // Get the current price to check if AI price is reasonable
     const { data: currentPrice } = await supabase
@@ -342,7 +352,8 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
     })
 
     // Parse the AI response
-    const aiAnalysis = JSON.parse(aiResponse.choices[0].message.content || '{"isPrintable": true, "issues": []}')
+    const responseContent = aiResponse.choices[0].message.content
+    const aiAnalysis = safeJsonParse(responseContent, { isPrintable: true, issues: [] })
 
     // Save validation result to database
     const { data: validation, error: validationError } = await supabase
@@ -488,10 +499,10 @@ export async function calculateQuoteWithAI(
     })
 
     // Parse the AI response
-    const printData = JSON.parse(
-      aiResponse.choices[0].message.content ||
-        '{"printSettings":{"layerHeight":0.2,"infill":20,"printSpeed":60,"temperature":210}}',
-    )
+    const responseContent = aiResponse.choices[0].message.content
+    const printData = safeJsonParse(responseContent, {
+      printSettings: { layerHeight: 0.2, infill: 20, printSpeed: 60, temperature: 210 },
+    })
 
     // Calculate print time using our utility
     const printTime =

@@ -29,7 +29,7 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
     const headerString = new TextDecoder().decode(headerView)
     const isAscii = headerString.trim().toLowerCase().startsWith("solid")
 
-    if (isAscii) {
+    if (isAscii && !isBinarySTL(fileBuffer)) {
       return parseAsciiSTL(fileBuffer)
     } else {
       return parseBinarySTL(fileBuffer)
@@ -43,6 +43,31 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
       volume: 50,
       surfaceArea: 200,
     }
+  }
+}
+
+// Function to check if a file is actually binary STL despite having "solid" in the header
+// Some software writes binary STL files with "solid" in the header
+function isBinarySTL(fileBuffer: ArrayBuffer): boolean {
+  // If file is too small to be binary STL, it's not binary
+  if (fileBuffer.byteLength < 84) {
+    return false
+  }
+
+  try {
+    const view = new DataView(fileBuffer)
+    const triangleCount = view.getUint32(80, true)
+
+    // Check if file size matches what we'd expect for binary STL
+    const expectedSize = 84 + triangleCount * 50
+
+    // Allow for some tolerance in file size
+    const sizeMatches = Math.abs(fileBuffer.byteLength - expectedSize) < 100
+
+    // If triangle count is reasonable and size matches, it's likely binary
+    return triangleCount > 0 && triangleCount < 5000000 && sizeMatches
+  } catch (error) {
+    return false
   }
 }
 
@@ -68,6 +93,10 @@ function computeAnalysisFromTriangles(vertices: number[][]): {
     const v2 = vertices[i + 1]
     const v3 = vertices[i + 2]
 
+    if (!v1 || !v2 || !v3) {
+      continue
+    }
+
     // Bounding box
     for (const v of [v1, v2, v3]) {
       minX = Math.min(minX, v[0])
@@ -85,35 +114,46 @@ function computeAnalysisFromTriangles(vertices: number[][]): {
     totalVolume += signedTetrahedronVolume(v1, v2, v3)
   }
 
+  // Ensure dimensions are valid
+  const dimensions = {
+    x: isFinite(maxX - minX) ? maxX - minX : 100,
+    y: isFinite(maxY - minY) ? maxY - minY : 100,
+    z: isFinite(maxZ - minZ) ? maxZ - minZ : 100,
+  }
+
   // Convert units to cm³ and cm²
-  const volumeCm3 = Math.abs(totalVolume) / 1000 // mm³ to cm³
-  const surfaceAreaCm2 = totalArea / 100 // mm² to cm²
+  const volumeCm3 = isFinite(totalVolume) ? Math.abs(totalVolume) / 1000 : 50 // mm³ to cm³
+  const surfaceAreaCm2 = isFinite(totalArea) ? totalArea / 100 : 200 // mm² to cm²
 
   return {
-    triangles: vertices.length / 3,
-    dimensions: {
-      x: maxX - minX,
-      y: maxY - minY,
-      z: maxZ - minZ,
-    },
+    triangles: Math.max(1, vertices.length / 3),
+    dimensions,
     volume: volumeCm3,
     surfaceArea: surfaceAreaCm2,
   }
 }
 
 function triangleArea(a: number[], b: number[], c: number[]): number {
-  // Area = 0.5 * |AB x AC|
-  const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
-  const ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
-  const cross = [ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0]]
-  return 0.5 * Math.sqrt(cross[0] ** 2 + cross[1] ** 2 + cross[2] ** 2)
+  try {
+    // Area = 0.5 * |AB x AC|
+    const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const ac = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
+    const cross = [ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0]]
+    return 0.5 * Math.sqrt(cross[0] ** 2 + cross[1] ** 2 + cross[2] ** 2)
+  } catch (error) {
+    return 0
+  }
 }
 
 function signedTetrahedronVolume(a: number[], b: number[], c: number[]): number {
-  // (1/6) * |a · (b × c)|
-  return (
-    (a[0] * (b[1] * c[2] - b[2] * c[1]) + a[1] * (b[2] * c[0] - b[0] * c[2]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6
-  )
+  try {
+    // (1/6) * |a · (b × c)|
+    return (
+      (a[0] * (b[1] * c[2] - b[2] * c[1]) + a[1] * (b[2] * c[0] - b[0] * c[2]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6
+    )
+  } catch (error) {
+    return 0
+  }
 }
 
 // ---- ASCII STL ----

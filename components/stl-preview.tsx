@@ -62,16 +62,24 @@ export function STLPreview({ file }: STLPreviewProps) {
             })
           } catch (e) {
             console.error("Error analyzing STL:", e)
+            setFileInfo({
+              name: file.name,
+              size: file.size,
+              type: fileType,
+            })
           }
         } else if (file.name.toLowerCase().endsWith(".obj")) {
           fileType = "OBJ"
+          setFileInfo({
+            name: file.name,
+            size: file.size,
+            type: fileType,
+          })
         } else if (file.name.toLowerCase().endsWith(".3mf")) {
           fileType = "3MF"
-        }
-
-        if (!fileInfo.dimensions) {
           setFileInfo({
-            ...fileInfo,
+            name: file.name,
+            size: file.size,
             type: fileType,
           })
         }
@@ -157,7 +165,7 @@ export function STLPreview({ file }: STLPreviewProps) {
     }
 
     renderPreview()
-  }, [file, fileInfo])
+  }, [file])
 
   if (error) {
     return <STLFallback fileName={file.name} fileSize={file.size} error={error} />
