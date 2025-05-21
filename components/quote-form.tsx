@@ -16,11 +16,16 @@ import { QuoteResult } from "@/components/quote-result"
 import type { Material, Region, Finish, Validation, Quote } from "@/app/actions"
 import dynamic from "next/dynamic"
 
-// Dynamically import STLPreview with no SSR
-const STLPreview = dynamic(() => import("@/components/stl-preview"), {
-  ssr: false,
-  loading: () => <div className="w-full h-64 flex items-center justify-center bg-gray-100">Loading 3D preview...</div>,
-})
+// Dynamically import STLPreview with no SSR and a fallback
+const STLPreview = dynamic(
+  () => import("@/components/stl-preview").catch(() => import("@/components/stl-simple-preview")),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-64 flex items-center justify-center bg-gray-100">Loading 3D preview...</div>
+    ),
+  },
+)
 
 export default function QuoteForm() {
   const [file, setFile] = useState<File | null>(null)

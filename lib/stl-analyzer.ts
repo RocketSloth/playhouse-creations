@@ -45,8 +45,8 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
       <body>
         <script type="module">
           // Import THREE.js ES modules from CDN
-          import * as THREE from 'https://cdn.skypack.dev/three@0.159.0';
-          import { STLLoader } from 'https://cdn.skypack.dev/three@0.159.0/examples/jsm/loaders/STLLoader.js';
+          import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+          import { STLLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/STLLoader.js';
           
           // Function to analyze STL
           window.analyzeSTL = function(arrayBuffer) {

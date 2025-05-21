@@ -71,9 +71,9 @@ export function STLPreview({ file }: STLPreviewProps) {
             <div class="loading">Loading 3D preview...</div>
             <script type="module">
               // Import THREE.js ES modules from CDN
-              import * as THREE from 'https://cdn.skypack.dev/three@0.159.0';
-              import { STLLoader } from 'https://cdn.skypack.dev/three@0.159.0/examples/jsm/loaders/STLLoader.js';
-              import { OrbitControls } from 'https://cdn.skypack.dev/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+              import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+              import { STLLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/STLLoader.js';
+              import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
               
               // Remove loading message
               document.querySelector('.loading').style.display = 'none';
