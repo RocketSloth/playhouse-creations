@@ -40,6 +40,7 @@ export default function QuoteForm() {
   const [isPaid, setIsPaid] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<string>("quote")
   const [showPreview, setShowPreview] = useState<boolean>(false)
+  const [apiError, setApiError] = useState<string | null>(null)
 
   // State for dynamic data
   const [materials, setMaterials] = useState<Material[]>([])
@@ -51,10 +52,23 @@ export default function QuoteForm() {
   useEffect(() => {
     async function fetchData() {
       try {
+        setApiError(null)
         const [materialsData, regionsData, finishesData] = await Promise.all([
-          getMaterials(),
-          getRegions(),
-          getFinishes(),
+          getMaterials().catch((error) => {
+            console.error("Error fetching materials:", error)
+            setApiError("Failed to load materials. Please refresh the page.")
+            return []
+          }),
+          getRegions().catch((error) => {
+            console.error("Error fetching regions:", error)
+            setApiError("Failed to load regions. Please refresh the page.")
+            return []
+          }),
+          getFinishes().catch((error) => {
+            console.error("Error fetching finishes:", error)
+            setApiError("Failed to load finishes. Please refresh the page.")
+            return []
+          }),
         ])
 
         setMaterials(materialsData)
@@ -62,6 +76,7 @@ export default function QuoteForm() {
         setFinishes(finishesData)
       } catch (error) {
         console.error("Error fetching data:", error)
+        setApiError("Failed to load necessary data. Please refresh the page.")
       } finally {
         setIsLoading(false)
       }
@@ -75,6 +90,7 @@ export default function QuoteForm() {
     setFileError(null)
     setValidationResult(null)
     setShowPreview(false)
+    setApiError(null)
 
     if (!selectedFile) {
       return
@@ -86,6 +102,12 @@ export default function QuoteForm() {
       !selectedFile.name.toLowerCase().endsWith(".3mf")
     ) {
       setFileError("Please upload a valid 3D model file (STL, OBJ, or 3MF)")
+      return
+    }
+
+    // Check file size (max 50MB)
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      setFileError("File size exceeds 50MB limit")
       return
     }
 
@@ -105,6 +127,7 @@ export default function QuoteForm() {
     }
 
     setIsValidating(true)
+    setApiError(null)
     try {
       // Use our AI-powered validation function
       const result = await validateSTLWithAI(file)
@@ -113,6 +136,7 @@ export default function QuoteForm() {
     } catch (error) {
       console.error("Validation error:", error)
       setFileError("Error validating file. Please try again.")
+      setApiError("Server error during validation. Please try again later.")
     } finally {
       setIsValidating(false)
     }
@@ -125,18 +149,22 @@ export default function QuoteForm() {
     }
 
     if (!material) {
+      setFileError("Please select a material")
       return
     }
 
     if (!finish) {
+      setFileError("Please select a finish")
       return
     }
 
     if (!region) {
+      setFileError("Please select a region")
       return
     }
 
     setIsCalculating(true)
+    setApiError(null)
     try {
       // Use our AI-powered quote calculation function with real data
       const quoteResult = await calculateQuoteWithAI(file, material, finish, region, email || undefined)
@@ -144,6 +172,7 @@ export default function QuoteForm() {
     } catch (error) {
       console.error("Quote calculation error:", error)
       setFileError("Error calculating quote. Please try again.")
+      setApiError("Server error during quote calculation. Please try again later.")
     } finally {
       setIsCalculating(false)
     }
@@ -173,6 +202,15 @@ export default function QuoteForm() {
             </p>
           </div>
         </div>
+
+        {apiError && (
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{apiError}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-2 lg:gap-12">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">

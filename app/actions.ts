@@ -6,6 +6,26 @@ import { analyzeSTL } from "@/lib/stl-analyzer"
 import { calculatePrintTime } from "@/lib/print-time-calculator"
 import { revalidatePath } from "next/cache"
 
+// Add this function at the top of your actions.ts file
+async function handleApiRequest<T>(requestFn: () => Promise<T>, errorMessage: string, fallbackValue: T): Promise<T> {
+  try {
+    return await requestFn()
+  } catch (error) {
+    console.error(`${errorMessage}:`, error)
+
+    // Check if it's a network error or CORS issue
+    if (error instanceof Error) {
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        console.error("Network error detected. Check your internet connection or CORS configuration.")
+      } else if (error.message.includes("400") || error.message.includes("Bad Request")) {
+        console.error("Bad Request (400) detected. The server rejected the request due to invalid data.")
+      }
+    }
+
+    return fallbackValue
+  }
+}
+
 // Initialize OpenAI client - only create it when needed to avoid browser initialization
 const getOpenAIClient = () => {
   const apiKey = process.env.OPENAI_API_KEY
@@ -411,7 +431,7 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
   }
 }
 
-// Function to calculate quote using OpenAI and real STL analysis
+// Update the calculateQuoteWithAI function to use our new error handler
 export async function calculateQuoteWithAI(
   file: File,
   materialCode: string,
@@ -423,9 +443,7 @@ export async function calculateQuoteWithAI(
 
   // Get material, finish, and region data
   const { data: material } = await supabase.from("materials").select("*").eq("code", materialCode).single()
-
   const { data: finish } = await supabase.from("finishes").select("*").eq("code", finishCode).single()
-
   const { data: region } = await supabase.from("regions").select("*").eq("code", regionCode).single()
 
   if (!material || !finish || !region) {
@@ -441,62 +459,73 @@ export async function calculateQuoteWithAI(
   // Read the file as ArrayBuffer
   const fileBuffer = await file.arrayBuffer()
 
+  // Analyze the STL geometry using our analyzer
+  let stlAnalysis
   try {
-    // Analyze the STL geometry using our analyzer
-    let stlAnalysis
-    try {
-      stlAnalysis = await analyzeSTL(fileBuffer)
-    } catch (error) {
-      console.error("Error analyzing STL file:", error)
-      // Use fallback data if analysis fails
-      stlAnalysis = {
-        triangles: 1000,
-        dimensions: { x: 100, y: 100, z: 100 },
-        volume: 50,
-        surfaceArea: 200,
-      }
+    stlAnalysis = await analyzeSTL(fileBuffer)
+  } catch (error) {
+    console.error("Error analyzing STL file:", error)
+    // Use fallback data if analysis fails
+    stlAnalysis = {
+      triangles: 1000,
+      dimensions: { x: 100, y: 100, z: 100 },
+      volume: 50,
+      surfaceArea: 200,
     }
+  }
 
-    const { triangles, dimensions, volume, surfaceArea } = stlAnalysis
+  const { triangles, dimensions, volume, surfaceArea } = stlAnalysis
 
-    // Calculate weight based on material density
-    const weight = volume * material.density
+  // Calculate weight based on material density
+  const weight = volume * material.density
 
+  try {
     // Initialize OpenAI client only when needed
     const openai = getOpenAIClient()
 
     // Use OpenAI to get optimal print settings
-    const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert in 3D printing. Provide optimal print settings.",
-        },
-        {
-          role: "user",
-          content: `Provide optimal print settings for this 3D model:
-            - Material: ${material.name}
-            - Finish quality: ${finish.name} (layer height: ${finish.layer_height}mm)
-            - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
-            - Volume: ${volume.toFixed(2)} cm³
-            - Surface Area: ${surfaceArea.toFixed(2)} cm²
-            - Weight: ${weight.toFixed(2)} g
-            - Triangles: ${triangles}
-            
-            Return your response as JSON with the following structure:
+    const aiResponse = await handleApiRequest(
+      () =>
+        openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
             {
-              "printSettings": {
-                "layerHeight": number,
-                "infill": number,
-                "printSpeed": number,
-                "temperature": number
-              }
-            }`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    })
+              role: "system",
+              content: "You are an expert in 3D printing. Provide optimal print settings.",
+            },
+            {
+              role: "user",
+              content: `Provide optimal print settings for this 3D model:
+              - Material: ${material.name}
+              - Finish quality: ${finish.name} (layer height: ${finish.layer_height}mm)
+              - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
+              - Volume: ${volume.toFixed(2)} cm³
+              - Surface Area: ${surfaceArea.toFixed(2)} cm²
+              - Weight: ${weight.toFixed(2)} g
+              - Triangles: ${triangles}
+              
+              Return your response as JSON with the following structure:
+              {
+                "printSettings": {
+                  "layerHeight": number,
+                  "infill": number,
+                  "printSpeed": number,
+                  "temperature": number
+                }
+              }`,
+            },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      "Error getting AI print settings",
+      {
+        choices: [
+          {
+            message: { content: '{"printSettings":{"layerHeight":0.2,"infill":20,"printSpeed":60,"temperature":210}}' },
+          },
+        ],
+      },
+    )
 
     // Parse the AI response
     const responseContent = aiResponse.choices[0].message.content
@@ -579,14 +608,6 @@ export async function calculateQuoteWithAI(
       printSpeed: 60,
       temperature: 210,
     }
-
-    // Use fallback data for STL analysis
-    const dimensions = { x: 100, y: 100, z: 100 }
-    const volume = 50
-    const triangles = 1000
-
-    // Calculate weight based on material density
-    const weight = volume * material.density
 
     // Calculate print time using our utility
     const printTime =
