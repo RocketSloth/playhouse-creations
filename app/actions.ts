@@ -78,6 +78,7 @@ export interface Validation {
     z: number
   }
   volume: number
+  surface_area?: number
   issues: string[] | null
   created_at: string
 }
@@ -300,10 +301,11 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
       triangles: 1000,
       dimensions: { x: 100, y: 100, z: 100 },
       volume: 50,
+      surfaceArea: 200,
     }
   }
 
-  const { triangles, dimensions, volume } = stlAnalysis
+  const { triangles, dimensions, volume, surfaceArea } = stlAnalysis
 
   try {
     // Initialize OpenAI client only when needed
@@ -326,6 +328,7 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
             - Triangle count: ${triangles}
             - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
             - Volume: ${volume.toFixed(2)} cm³
+            - Surface Area: ${surfaceArea.toFixed(2)} cm²
             
             Identify any potential issues for 3D printing and determine if it's printable.
             Return your response as JSON with the following structure:
@@ -351,6 +354,7 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
         is_printable: aiAnalysis.isPrintable,
         dimensions,
         volume,
+        surface_area: surfaceArea,
         issues: aiAnalysis.issues,
       })
       .select()
@@ -381,6 +385,7 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
         is_printable: fallbackValidation.is_printable,
         dimensions,
         volume,
+        surface_area: surfaceArea,
         issues: fallbackValidation.issues,
       })
       .select()
@@ -437,10 +442,11 @@ export async function calculateQuoteWithAI(
         triangles: 1000,
         dimensions: { x: 100, y: 100, z: 100 },
         volume: 50,
+        surfaceArea: 200,
       }
     }
 
-    const { triangles, dimensions, volume } = stlAnalysis
+    const { triangles, dimensions, volume, surfaceArea } = stlAnalysis
 
     // Calculate weight based on material density
     const weight = volume * material.density
@@ -463,6 +469,7 @@ export async function calculateQuoteWithAI(
             - Finish quality: ${finish.name} (layer height: ${finish.layer_height}mm)
             - Dimensions: ${dimensions.x.toFixed(2)} x ${dimensions.y.toFixed(2)} x ${dimensions.z.toFixed(2)} mm
             - Volume: ${volume.toFixed(2)} cm³
+            - Surface Area: ${surfaceArea.toFixed(2)} cm²
             - Weight: ${weight.toFixed(2)} g
             - Triangles: ${triangles}
             

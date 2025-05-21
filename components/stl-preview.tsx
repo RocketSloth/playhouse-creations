@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { STLFallback } from "./stl-fallback"
 import { Loader2 } from "lucide-react"
+import { analyzeSTL } from "@/lib/stl-analyzer"
 
 interface STLPreviewProps {
   file: File
@@ -16,6 +17,10 @@ export function STLPreview({ file }: STLPreviewProps) {
     name: string
     size: number
     type: string
+    dimensions?: { x: number; y: number; z: number }
+    triangles?: number
+    volume?: number
+    surfaceArea?: number
   }>({ name: file.name, size: file.size, type: "Unknown" })
 
   useEffect(() => {
@@ -42,17 +47,34 @@ export function STLPreview({ file }: STLPreviewProps) {
           const headerView = new Uint8Array(buffer, 0, 80)
           const headerString = new TextDecoder().decode(headerView)
           fileType = headerString.trim().toLowerCase().startsWith("solid") ? "ASCII STL" : "Binary STL"
+
+          // Analyze the STL file
+          try {
+            const analysis = await analyzeSTL(buffer)
+            setFileInfo({
+              name: file.name,
+              size: file.size,
+              type: fileType,
+              dimensions: analysis.dimensions,
+              triangles: analysis.triangles,
+              volume: analysis.volume,
+              surfaceArea: analysis.surfaceArea,
+            })
+          } catch (e) {
+            console.error("Error analyzing STL:", e)
+          }
         } else if (file.name.toLowerCase().endsWith(".obj")) {
           fileType = "OBJ"
         } else if (file.name.toLowerCase().endsWith(".3mf")) {
           fileType = "3MF"
         }
 
-        setFileInfo({
-          name: file.name,
-          size: file.size,
-          type: fileType,
-        })
+        if (!fileInfo.dimensions) {
+          setFileInfo({
+            ...fileInfo,
+            type: fileType,
+          })
+        }
 
         // Clear canvas
         ctx.fillStyle = "#f0f0f0"
@@ -62,11 +84,31 @@ export function STLPreview({ file }: STLPreviewProps) {
         ctx.fillStyle = "#333"
         ctx.font = "16px sans-serif"
         ctx.textAlign = "center"
-        ctx.fillText(file.name, canvas.width / 2, canvas.height / 2 - 40)
+        ctx.fillText(file.name, canvas.width / 2, 30)
 
         ctx.font = "14px sans-serif"
-        ctx.fillText(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, canvas.width / 2, canvas.height / 2 - 10)
-        ctx.fillText(`Type: ${fileType}`, canvas.width / 2, canvas.height / 2 + 20)
+        ctx.fillText(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, canvas.width / 2, 55)
+        ctx.fillText(`Type: ${fileType}`, canvas.width / 2, 75)
+
+        if (fileInfo.triangles) {
+          ctx.fillText(`Triangles: ${fileInfo.triangles.toLocaleString()}`, canvas.width / 2, 95)
+        }
+
+        if (fileInfo.dimensions) {
+          ctx.fillText(
+            `Dimensions: ${fileInfo.dimensions.x.toFixed(1)} × ${fileInfo.dimensions.y.toFixed(1)} × ${fileInfo.dimensions.z.toFixed(1)} mm`,
+            canvas.width / 2,
+            115,
+          )
+        }
+
+        if (fileInfo.volume) {
+          ctx.fillText(`Volume: ${fileInfo.volume.toFixed(2)} cm³`, canvas.width / 2, 135)
+        }
+
+        if (fileInfo.surfaceArea) {
+          ctx.fillText(`Surface Area: ${fileInfo.surfaceArea.toFixed(2)} cm²`, canvas.width / 2, 155)
+        }
 
         // Draw a simple 3D cube representation
         const centerX = canvas.width / 2
@@ -115,7 +157,7 @@ export function STLPreview({ file }: STLPreviewProps) {
     }
 
     renderPreview()
-  }, [file])
+  }, [file, fileInfo])
 
   if (error) {
     return <STLFallback fileName={file.name} fileSize={file.size} error={error} />

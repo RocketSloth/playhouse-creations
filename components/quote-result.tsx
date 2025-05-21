@@ -114,6 +114,9 @@ export function QuoteResult({ quote }: QuoteResultProps) {
               <div className="font-medium">Weight:</div>
               <div>{quote.weight.toFixed(2)} g</div>
 
+              <div className="font-medium">Surface Area:</div>
+              <div>{(quote.volume * 4).toFixed(2)} cm²</div>
+
               <div className="font-medium">Material:</div>
               <div>{materialName}</div>
 
