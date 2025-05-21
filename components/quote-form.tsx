@@ -15,9 +15,8 @@ import { PaymentForm } from "@/components/payment-form"
 import { QuoteResult } from "@/components/quote-result"
 import type { Material, Region, Finish, Validation, Quote } from "@/app/actions"
 import dynamic from "next/dynamic"
-import { STLFallback } from "./stl-fallback"
 
-// Dynamically import STLPreview with no SSR and a fallback
+// Dynamically import STLPreview with no SSR
 const STLPreview = dynamic(() => import("@/components/stl-preview"), {
   ssr: false,
   loading: () => (
@@ -25,10 +24,6 @@ const STLPreview = dynamic(() => import("@/components/stl-preview"), {
       <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
     </div>
   ),
-  onError: (err) => {
-    console.error("Error loading STLPreview:", err)
-    return <STLFallback fileName="Error" fileSize={0} error="Failed to load 3D preview component" />
-  },
 })
 
 export default function QuoteForm() {
