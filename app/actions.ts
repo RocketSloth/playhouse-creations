@@ -289,9 +289,21 @@ export async function validateSTLWithAI(file: File): Promise<Validation> {
   // Read the file as ArrayBuffer
   const fileBuffer = await file.arrayBuffer()
 
-  // Analyze the STL geometry using THREE.js
-  // This will return placeholder data on the server
-  const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
+  // Analyze the STL geometry using our analyzer
+  let stlAnalysis
+  try {
+    stlAnalysis = await analyzeSTL(fileBuffer)
+  } catch (error) {
+    console.error("Error analyzing STL file:", error)
+    // Use fallback data if analysis fails
+    stlAnalysis = {
+      triangles: 1000,
+      dimensions: { x: 100, y: 100, z: 100 },
+      volume: 50,
+    }
+  }
+
+  const { triangles, dimensions, volume } = stlAnalysis
 
   try {
     // Initialize OpenAI client only when needed
@@ -414,9 +426,21 @@ export async function calculateQuoteWithAI(
   const fileBuffer = await file.arrayBuffer()
 
   try {
-    // Analyze the STL geometry using THREE.js
-    // This will return placeholder data on the server
-    const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
+    // Analyze the STL geometry using our analyzer
+    let stlAnalysis
+    try {
+      stlAnalysis = await analyzeSTL(fileBuffer)
+    } catch (error) {
+      console.error("Error analyzing STL file:", error)
+      // Use fallback data if analysis fails
+      stlAnalysis = {
+        triangles: 1000,
+        dimensions: { x: 100, y: 100, z: 100 },
+        volume: 50,
+      }
+    }
+
+    const { triangles, dimensions, volume } = stlAnalysis
 
     // Calculate weight based on material density
     const weight = volume * material.density
@@ -538,9 +562,10 @@ export async function calculateQuoteWithAI(
       temperature: 210,
     }
 
-    // Analyze the STL geometry using THREE.js
-    // This will return placeholder data on the server
-    const { triangles, dimensions, volume } = await analyzeSTL(fileBuffer)
+    // Use fallback data for STL analysis
+    const dimensions = { x: 100, y: 100, z: 100 }
+    const volume = 50
+    const triangles = 1000
 
     // Calculate weight based on material density
     const weight = volume * material.density

@@ -12,6 +12,11 @@ export function STLPreview({ file }: STLPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [fileInfo, setFileInfo] = useState<{
+    name: string
+    size: number
+    type: string
+  }>({ name: file.name, size: file.size, type: "Unknown" })
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -29,6 +34,26 @@ export function STLPreview({ file }: STLPreviewProps) {
         setIsLoading(true)
         setError(null)
 
+        // Determine file type
+        let fileType = "Unknown"
+        if (file.name.toLowerCase().endsWith(".stl")) {
+          // Try to determine if binary or ASCII STL
+          const buffer = await file.arrayBuffer()
+          const headerView = new Uint8Array(buffer, 0, 80)
+          const headerString = new TextDecoder().decode(headerView)
+          fileType = headerString.trim().toLowerCase().startsWith("solid") ? "ASCII STL" : "Binary STL"
+        } else if (file.name.toLowerCase().endsWith(".obj")) {
+          fileType = "OBJ"
+        } else if (file.name.toLowerCase().endsWith(".3mf")) {
+          fileType = "3MF"
+        }
+
+        setFileInfo({
+          name: file.name,
+          size: file.size,
+          type: fileType,
+        })
+
         // Clear canvas
         ctx.fillStyle = "#f0f0f0"
         ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -37,14 +62,15 @@ export function STLPreview({ file }: STLPreviewProps) {
         ctx.fillStyle = "#333"
         ctx.font = "16px sans-serif"
         ctx.textAlign = "center"
-        ctx.fillText(file.name, canvas.width / 2, canvas.height / 2 - 20)
+        ctx.fillText(file.name, canvas.width / 2, canvas.height / 2 - 40)
 
         ctx.font = "14px sans-serif"
-        ctx.fillText(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, canvas.width / 2, canvas.height / 2 + 10)
+        ctx.fillText(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, canvas.width / 2, canvas.height / 2 - 10)
+        ctx.fillText(`Type: ${fileType}`, canvas.width / 2, canvas.height / 2 + 20)
 
         // Draw a simple 3D cube representation
         const centerX = canvas.width / 2
-        const centerY = canvas.height / 2 + 50
+        const centerY = canvas.height / 2 + 70
         const size = 40
 
         // Draw cube faces
@@ -104,6 +130,9 @@ export function STLPreview({ file }: STLPreviewProps) {
           </div>
         )}
         <canvas ref={canvasRef} width={400} height={256} className="w-full h-full" />
+      </div>
+      <div className="mt-2 text-xs text-gray-500">
+        {fileInfo.type !== "Unknown" && <p>File format: {fileInfo.type}</p>}
       </div>
     </div>
   )
