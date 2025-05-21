@@ -1203,7 +1203,7 @@ export default function QuoteCalculator() {
                   </div>
                 </div>
 
-                <div className="h-[500px] glass rounded-lg overflow-hidden border border-cyber-blue/20">
+                <div className="h-[500px] md:h-[600px] glass rounded-lg overflow-hidden border border-cyber-blue/20">
                   {files.length > 0 ? (
                     activeModelIndex >= 0 && activeModelIndex < files.length ? (
                       <ModelViewer file={files[activeModelIndex]} color={modelsData[activeModelIndex]?.color} />
