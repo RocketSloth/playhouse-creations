@@ -148,6 +148,152 @@ export interface Quote {
   created_at: string
 }
 
+export interface QuoteFormData {
+  customerName: string
+  customerEmail: string
+  companyName?: string
+  projectType: string
+  projectDescription: string
+  projectScope: string
+  timeline: string
+  budget?: string
+  additionalRequirements?: string
+  industry?: string
+}
+
+export interface QuoteResponse {
+  id: string
+  customerName: string
+  customerEmail: string
+  companyName: string
+  projectType: string
+  quoteDate: string
+  expiryDate: string
+  introduction: string
+  scopeOfWork: string
+  deliverables: string[]
+  timeline: string
+  pricing: {
+    breakdown: Array<{
+      item: string
+      description: string
+      cost: number
+    }>
+    subtotal: number
+    tax: number
+    total: number
+  }
+  terms: string[]
+  nextSteps: string[]
+}
+
+export async function generateQuote(formData: QuoteFormData): Promise<QuoteResponse> {
+  try {
+    const openai = getOpenAIClient()
+
+    // Prepare the prompt for OpenAI
+    const prompt = `
+      Generate a detailed, professional quote based on the following information:
+      
+      Customer Name: ${formData.customerName}
+      Customer Email: ${formData.customerEmail}
+      ${formData.companyName ? `Company: ${formData.companyName}` : ""}
+      Project Type: ${formData.projectType}
+      Project Description: ${formData.projectDescription}
+      Project Scope: ${formData.projectScope}
+      Timeline: ${formData.timeline}
+      ${formData.budget ? `Budget: ${formData.budget}` : ""}
+      ${formData.additionalRequirements ? `Additional Requirements: ${formData.additionalRequirements}` : ""}
+      ${formData.industry ? `Industry: ${formData.industry}` : ""}
+      
+      Create a comprehensive quote with the following:
+      1. A professional introduction
+      2. Detailed scope of work based on the project description
+      3. Clear deliverables as a list
+      4. Timeline with key milestones
+      5. Detailed pricing breakdown with line items, descriptions, and costs
+      6. Subtotal, tax (10%), and total
+      7. Terms and conditions relevant to this type of project
+      8. Next steps for the client
+      
+      The quote should be realistic, professional, and ready to send to the client.
+      Format your response as a JSON object with the following structure:
+      {
+        "id": "unique quote ID (format: QUOTE-YYYYMMDD-XXXX where XXXX is a random 4-digit number)",
+        "customerName": "client's name",
+        "customerEmail": "client's email",
+        "companyName": "client's company name or 'Individual Client' if none provided",
+        "projectType": "type of project",
+        "quoteDate": "today's date in YYYY-MM-DD format",
+        "expiryDate": "date 30 days from today in YYYY-MM-DD format",
+        "introduction": "professional introduction paragraph",
+        "scopeOfWork": "detailed description of the work to be done",
+        "deliverables": ["list", "of", "deliverables"],
+        "timeline": "detailed timeline with milestones",
+        "pricing": {
+          "breakdown": [
+            {
+              "item": "name of service/product",
+              "description": "brief description",
+              "cost": number (no currency symbol)
+            }
+          ],
+          "subtotal": number (sum of all costs),
+          "tax": number (10% of subtotal),
+          "total": number (subtotal + tax)
+        },
+        "terms": ["list", "of", "terms", "and", "conditions"],
+        "nextSteps": ["list", "of", "next", "steps"]
+      }
+    `
+
+    // Call OpenAI API
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional quote generation assistant. Generate detailed, accurate quotes based on the information provided.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      response_format: { type: "json_object" },
+    })
+
+    // Parse the response
+    const quoteData = JSON.parse(response.choices[0].message.content || "{}")
+
+    // Validate the response has the expected structure
+    if (!quoteData.id || !quoteData.pricing || !quoteData.deliverables) {
+      throw new Error("Invalid response from OpenAI API")
+    }
+
+    // Return the quote data
+    return quoteData as QuoteResponse
+  } catch (error) {
+    console.error("Error generating quote:", error)
+    throw new Error("Failed to generate quote. Please try again.")
+  }
+}
+
+export async function saveQuote(quote: QuoteResponse): Promise<void> {
+  try {
+    // In a real application, you would save the quote to a database here
+    // For now, we'll just log it
+    console.log("Quote saved:", quote.id)
+
+    // Revalidate the quotes page
+    revalidatePath("/quotes")
+  } catch (error) {
+    console.error("Error saving quote:", error)
+    throw new Error("Failed to save quote. Please try again.")
+  }
+}
+
 // Function to get all materials
 export async function getMaterials(): Promise<Material[]> {
   const supabase = createServerSupabaseClient()
