@@ -1,15 +1,22 @@
+// stl-analyzer.ts
+
 export interface STLAnalysisResult {
   triangles: number
   dimensions: {
-    x: number
-    y: number
-    z: number
+    x: number // mm
+    y: number // mm
+    z: number // mm
   }
   volume: number // in cm³
   surfaceArea: number // in cm²
 }
 
-// Function to analyze STL file and return geometry information
+/**
+ * Analyzes an STL file (binary or ASCII) and returns
+ * triangle count, bounding box, volume, and surface area.
+ * @param fileBuffer ArrayBuffer of the STL file
+ * @returns Promise<STLAnalysisResult>
+ */
 export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisResult> {
   // For server-side rendering or environments where window is undefined,
   // return a placeholder result
@@ -24,7 +31,7 @@ export async function analyzeSTL(fileBuffer: ArrayBuffer): Promise<STLAnalysisRe
   }
 
   try {
-    // Check if it's ASCII or binary
+    // Try to detect if ASCII or Binary STL
     const headerView = new Uint8Array(fileBuffer, 0, 80)
     const headerString = new TextDecoder().decode(headerView)
     const isAscii = headerString.trim().toLowerCase().startsWith("solid")
@@ -71,14 +78,8 @@ function isBinarySTL(fileBuffer: ArrayBuffer): boolean {
   }
 }
 
-// ---- Helpers for both ASCII and Binary ----
-
-function computeAnalysisFromTriangles(vertices: number[][]): {
-  triangles: number
-  dimensions: { x: number; y: number; z: number }
-  volume: number
-  surfaceArea: number
-} {
+// Shared geometry calculation for both ASCII and Binary
+function computeAnalysisFromTriangles(vertices: number[][]): STLAnalysisResult {
   let minX = Number.POSITIVE_INFINITY,
     minY = Number.POSITIVE_INFINITY,
     minZ = Number.POSITIVE_INFINITY
@@ -93,6 +94,7 @@ function computeAnalysisFromTriangles(vertices: number[][]): {
     const v2 = vertices[i + 1]
     const v3 = vertices[i + 2]
 
+    // Skip invalid triangles
     if (!v1 || !v2 || !v3) {
       continue
     }
@@ -121,7 +123,7 @@ function computeAnalysisFromTriangles(vertices: number[][]): {
     z: isFinite(maxZ - minZ) ? maxZ - minZ : 100,
   }
 
-  // Convert units to cm³ and cm²
+  // Convert units: mm³ → cm³ for volume, mm² → cm² for area
   const volumeCm3 = isFinite(totalVolume) ? Math.abs(totalVolume) / 1000 : 50 // mm³ to cm³
   const surfaceAreaCm2 = isFinite(totalArea) ? totalArea / 100 : 200 // mm² to cm²
 
@@ -156,8 +158,7 @@ function signedTetrahedronVolume(a: number[], b: number[], c: number[]): number 
   }
 }
 
-// ---- ASCII STL ----
-
+// Parse ASCII STL
 function parseAsciiSTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
   try {
     const text = new TextDecoder().decode(fileBuffer)
@@ -185,8 +186,7 @@ function parseAsciiSTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
   }
 }
 
-// ---- Binary STL ----
-
+// Parse Binary STL
 function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
   try {
     const view = new DataView(fileBuffer)
@@ -246,6 +246,7 @@ function parseBinarySTL(fileBuffer: ArrayBuffer): STLAnalysisResult {
           // Continue to next vertex
         }
       }
+      // skip 2-byte attribute at the end
     }
 
     if (vertices.length % 3 !== 0 || vertices.length === 0) {
