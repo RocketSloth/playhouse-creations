@@ -32,43 +32,73 @@ export interface MaterialPrice {
 }
 
 export const getMaterials = async (): Promise<Material[]> => {
-  const supabase = createBrowserClient()
-  const { data, error } = await supabase.from("materials").select("*")
-
-  if (error) {
-    console.error("Error fetching materials:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return []
   }
 
-  return data || []
+  try {
+    const supabase = createBrowserClient()
+    const { data, error } = await supabase.from("materials").select("*")
+
+    if (error) {
+      console.error("Error fetching materials:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getMaterials:", error)
+    return []
+  }
 }
 
 export const getFinishes = async (): Promise<Finish[]> => {
-  const supabase = createBrowserClient()
-  const { data, error } = await supabase.from("finishes").select("*")
-
-  if (error) {
-    console.error("Error fetching finishes:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return []
   }
 
-  return data || []
+  try {
+    const supabase = createBrowserClient()
+    const { data, error } = await supabase.from("finishes").select("*")
+
+    if (error) {
+      console.error("Error fetching finishes:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getFinishes:", error)
+    return []
+  }
 }
 
 export const getMaterialPrices = async (materialId?: number): Promise<MaterialPrice[]> => {
-  const supabase = createBrowserClient()
-  let query = supabase.from("material_prices").select("*")
-
-  if (materialId) {
-    query = query.eq("material_id", materialId)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error("Error fetching material prices:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return []
   }
 
-  return data || []
+  try {
+    const supabase = createBrowserClient()
+    let query = supabase.from("material_prices").select("*")
+
+    if (materialId) {
+      query = query.eq("material_id", materialId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching material prices:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getMaterialPrices:", error)
+    return []
+  }
 }

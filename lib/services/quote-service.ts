@@ -24,61 +24,91 @@ export interface Quote {
 export const saveQuote = async (
   quoteData: Omit<Quote, "id" | "user_id" | "created_at" | "updated_at">,
 ): Promise<Quote | null> => {
-  const supabase = createBrowserClient()
-
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData.user) {
-    throw new Error("User not authenticated")
-  }
-
-  const { data, error } = await supabase
-    .from("quotes")
-    .insert({
-      ...quoteData,
-      user_id: userData.user.id,
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error("Error saving quote:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return null
   }
 
-  return data
+  try {
+    const supabase = createBrowserClient()
+
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData.user) {
+      throw new Error("User not authenticated")
+    }
+
+    const { data, error } = await supabase
+      .from("quotes")
+      .insert({
+        ...quoteData,
+        user_id: userData.user.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error saving quote:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error in saveQuote:", error)
+    return null
+  }
 }
 
 export const getUserQuotes = async (): Promise<Quote[]> => {
-  const supabase = createBrowserClient()
-
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData.user) {
-    throw new Error("User not authenticated")
-  }
-
-  const { data, error } = await supabase
-    .from("quotes")
-    .select("*")
-    .eq("user_id", userData.user.id)
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("Error fetching quotes:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return []
   }
 
-  return data || []
+  try {
+    const supabase = createBrowserClient()
+
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData.user) {
+      throw new Error("User not authenticated")
+    }
+
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("user_id", userData.user.id)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching quotes:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getUserQuotes:", error)
+    return []
+  }
 }
 
 export const getQuoteById = async (id: number): Promise<Quote | null> => {
-  const supabase = createBrowserClient()
-
-  const { data, error } = await supabase.from("quotes").select("*").eq("id", id).single()
-
-  if (error) {
-    console.error("Error fetching quote:", error)
+  // Check if we're in the browser
+  if (typeof window === "undefined") {
     return null
   }
 
-  return data
+  try {
+    const supabase = createBrowserClient()
+
+    const { data, error } = await supabase.from("quotes").select("*").eq("id", id).single()
+
+    if (error) {
+      console.error("Error fetching quote:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error in getQuoteById:", error)
+    return null
+  }
 }

@@ -35,7 +35,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { supabase } = useSupabase()
+  const { supabase, isLoading: isClientLoading } = useSupabase()
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -43,6 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    // Don't try to get the session if the supabase client isn't ready
+    if (!supabase) return
+
     const getSession = async () => {
       try {
         const {
@@ -106,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router, supabase])
 
   const fetchProfile = async (userId: string) => {
+    if (!supabase) return
+
     try {
       console.log("Fetching profile for user:", userId)
 
@@ -124,26 +129,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!profileData || profileData.length === 0) {
         console.log("No profile found for user, creating one...")
 
-        // We already have the userId, so we don't need to fetch the user again
-        // Instead, get the user's email and metadata directly from the session
-        const { data: sessionData } = await supabase.auth.getSession()
-        const currentUser = sessionData.session?.user
-
-        if (!currentUser) {
-          console.error("No active session found when creating profile")
-          // Try to get the user directly as a fallback
-          const { data: userData } = await supabase.auth.getUser()
-          if (!userData.user) {
-            console.error("Unable to get user data for profile creation")
-            return
-          }
-          // Use the user data from getUser() call
-          await createProfileForUser(userId, userData.user)
+        // Get user email from auth
+        const { data: userData } = await supabase.auth.getUser()
+        if (!userData.user) {
+          console.error("Unable to get user data")
           return
         }
 
-        // Use the user data from the session
-        await createProfileForUser(userId, currentUser)
+        // Create a new profile
+        const { data: newProfile, error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            id: userId,
+            name: userData.user.user_metadata?.name || "User",
+            email: userData.user.email || "",
+            business_type: userData.user.user_metadata?.business_type || "individual",
+            credits: 5,
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error("Error creating profile:", createError)
+          return
+        }
+
+        console.log("Created new profile:", newProfile)
+        setProfile(newProfile)
         return
       }
 
@@ -155,40 +167,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Helper function to create a profile for a user
-  const createProfileForUser = async (userId: string, userData: User) => {
-    try {
-      const { data: newProfile, error: createError } = await supabase
-        .from("profiles")
-        .insert({
-          id: userId,
-          name: userData.user_metadata?.name || "User",
-          email: userData.email || "",
-          business_type: userData.user_metadata?.business_type || "individual",
-          credits: 5,
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error("Error creating profile:", createError)
-        return
-      }
-
-      console.log("Created new profile:", newProfile)
-      setProfile(newProfile)
-    } catch (error) {
-      console.error("Error in createProfileForUser:", error)
-    }
-  }
-
   const refreshProfile = async () => {
-    if (user) {
+    if (user && supabase) {
       await fetchProfile(user.id)
     }
   }
 
   const signUp = async (email: string, password: string, name: string, businessType: string) => {
+    if (!supabase) {
+      return { error: new Error("Supabase client not initialized"), data: null }
+    }
+
     try {
       console.log("Signing up with:", { email, name, businessType })
 
@@ -229,6 +218,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
+    if (!supabase) {
+      return { error: new Error("Supabase client not initialized"), data: null }
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -249,6 +242,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    if (!supabase) return
+
     try {
       await supabase.auth.signOut()
       router.push("/login")
@@ -257,10 +252,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Combine loading states
+  const combinedLoading = isClientLoading || isLoading
+
   const value = {
     user,
     session,
-    isLoading,
+    isLoading: combinedLoading,
     signUp,
     signIn,
     signOut,

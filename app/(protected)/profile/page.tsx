@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 export default function Profile() {
   const { profile, refreshProfile, signOut } = useAuth()
-  const { supabase } = useSupabase()
+  const { supabase, isLoading: isClientLoading } = useSupabase()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -42,6 +42,16 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!supabase) {
+      toast({
+        title: "Error",
+        description: "Unable to connect to the database",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -75,7 +85,7 @@ export default function Profile() {
     }
   }
 
-  if (!profile) {
+  if (isClientLoading || !profile) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-cyber-blue" />
