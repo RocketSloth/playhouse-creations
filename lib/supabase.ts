@@ -1,111 +1,48 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Create a single supabase client for server-side usage
-export const createServerSupabaseClient = () => {
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Create a singleton instance for the browser client
+let browserClient: ReturnType<typeof createClient> | null = null
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables")
+// Create a single supabase client for the browser
+export const createBrowserClient = () => {
+  if (typeof window === "undefined") {
+    throw new Error("Browser client cannot be used on the server side")
   }
 
-  return createClient(supabaseUrl, supabaseKey)
-}
+  if (!browserClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Types for our database tables
-export type Material = {
-  id: number
-  code: string
-  name: string
-  description: string | null
-  density: number
-  created_at: string
-  updated_at: string
-}
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase URL and anon key must be defined")
+    }
 
-export type Region = {
-  id: number
-  code: string
-  name: string
-  currency: string
-  shipping_base_cost: number
-  shipping_weight_factor: number
-  created_at: string
-  updated_at: string
-}
+    console.log("Creating new Supabase browser client")
 
-export type Finish = {
-  id: number
-  code: string
-  name: string
-  description: string | null
-  layer_height: number
-  time_multiplier: number
-  cost_multiplier: number
-  created_at: string
-  updated_at: string
-}
-
-export type MaterialPrice = {
-  id: number
-  material_id: number
-  region_id: number
-  price_per_gram: number
-  last_updated: string
-  market_trend: string | null
-}
-
-export type Quote = {
-  id: number
-  quote_reference: string
-  file_name: string
-  file_size: number
-  material_id: number
-  finish_id: number
-  region_id: number
-  email: string | null
-  dimensions: {
-    x: number
-    y: number
-    z: number
+    browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+      },
+    })
   }
-  volume: number
-  weight: number
-  triangles: number
-  material_cost: number
-  labor_cost: number
-  shipping_cost: number
-  markup: number
-  total_price: number
-  print_time: number
-  print_settings: {
-    layerHeight: number
-    infill: number
-    printSpeed: number
-    temperature: number
-  }
-  is_paid: boolean
-  estimated_delivery: string | null
-  created_at: string
+
+  return browserClient
 }
 
-export type Validation = {
-  id: number
-  file_name: string
-  file_size: number
-  triangles: number
-  is_printable: boolean
-  dimensions: {
-    x: number
-    y: number
-    z: number
-  }
-  volume: number
-  issues: string[] | null
-  created_at: string
-}
+// Server-side client with elevated permissions (creates a new instance each time)
+export const createServerClient = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Type for joined material with price
-export type MaterialWithPrice = Material & {
-  price: MaterialPrice
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Supabase URL and service key must be defined")
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }

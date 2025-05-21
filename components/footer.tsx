@@ -1,29 +1,27 @@
 import { Mail } from "lucide-react"
 
-export default function Footer() {
+export function Footer() {
   return (
-    <footer className="w-full border-t bg-gray-100">
-      <div className="container px-4 md:px-6 py-12">
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold">3D Print Quoter</h3>
-            <p className="text-gray-500">
-              Get instant, accurate quotes for your 3D printing projects. Upload your file, select your options, and get
-              a detailed price breakdown in seconds.
+    <footer className="mt-12 py-6 border-t border-cyber-blue/20 relative z-10">
+      <div className="container max-w-5xl mx-auto px-4">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-4 md:mb-0">
+            <p className="font-medium text-lg bg-gradient-to-r from-cyber-blue to-cyber-purple bg-clip-text text-transparent">
+              PLAyhouse Creations
             </p>
+            <p className="text-sm text-muted-foreground">Quality 3D printing services</p>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold">Contact Us</h3>
-            <ul className="space-y-2">
-              <li className="flex items-start">
-                <Mail className="mr-2 h-5 w-5 text-gray-500" />
-                <span className="text-gray-500">support@3dprintquoter.com</span>
-              </li>
-            </ul>
+
+          <div className="flex items-center glass px-4 py-2 rounded-md">
+            <Mail className="h-4 w-4 mr-2 text-cyber-blue" />
+            <a href="mailto:designs@playhousecreations.com" className="text-sm hover:text-cyber-blue transition-colors">
+              designs@playhousecreations.com
+            </a>
           </div>
         </div>
-        <div className="mt-8 border-t pt-8">
-          <p className="text-center text-gray-500">© 2025 3D Print Quoter. All rights reserved.</p>
+
+        <div className="mt-6 text-center text-xs text-muted-foreground">
+          <p>© {new Date().getFullYear()} PLAyhouse Creations. All rights reserved.</p>
         </div>
       </div>
     </footer>
