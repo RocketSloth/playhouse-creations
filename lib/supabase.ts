@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 // Create a singleton instance for the browser client
-let browserClient: ReturnType<typeof createClient> | null = null
+let browserClient: SupabaseClient | null = null
 
 // Create a single supabase client for the browser
 export const createBrowserClient = () => {
@@ -23,6 +24,8 @@ export const createBrowserClient = () => {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
+        storageKey: "playhouse_auth_token",
+        storage: window.localStorage,
       },
     })
   }

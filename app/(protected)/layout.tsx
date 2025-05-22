@@ -14,9 +14,15 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login")
-    }
+    // Add a small delay to ensure auth state is properly checked
+    const redirectTimer = setTimeout(() => {
+      if (!isLoading && !user) {
+        console.log("No authenticated user, redirecting to login")
+        router.push("/login")
+      }
+    }, 500)
+
+    return () => clearTimeout(redirectTimer)
   }, [user, isLoading, router])
 
   if (isLoading) {
@@ -31,7 +37,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse-slow text-cyber-blue text-center">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto" />
+          <p className="mt-4 font-light tracking-wider">REDIRECTING TO LOGIN...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

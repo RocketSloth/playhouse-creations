@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, LogIn } from "lucide-react"
+import { Loader2, LogIn, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const { signIn } = useAuth()
   const router = useRouter()
@@ -25,14 +27,18 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
     try {
-      const { error } = await signIn(email, password)
+      console.log("Attempting login with:", email)
+      const { error: signInError } = await signIn(email, password)
 
-      if (error) {
+      if (signInError) {
+        console.error("Login error:", signInError)
+        setError(signInError.message || "Failed to log in")
         toast({
           title: "Login failed",
-          description: error.message,
+          description: signInError.message || "Invalid email or password",
           variant: "destructive",
         })
       } else {
@@ -43,6 +49,8 @@ export default function Login() {
         router.push("/dashboard")
       }
     } catch (error: any) {
+      console.error("Unexpected login error:", error)
+      setError(error.message || "An unexpected error occurred")
       toast({
         title: "An error occurred",
         description: error.message || "Failed to log in",
@@ -61,6 +69,13 @@ export default function Login() {
           <CardDescription>Enter your credentials to access your account</CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

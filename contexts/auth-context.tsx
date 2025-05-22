@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import type { Session, User } from "@supabase/supabase-js"
+import type { Session, User, AuthError } from "@supabase/supabase-js"
 import { useSupabase } from "@/hooks/use-supabase"
 import { useRouter } from "next/navigation"
 
@@ -17,14 +17,14 @@ type AuthContextType = {
     name: string,
     businessType: string,
   ) => Promise<{
-    error: any | null
+    error: AuthError | Error | null
     data: any | null
   }>
   signIn: (
     email: string,
     password: string,
   ) => Promise<{
-    error: any | null
+    error: AuthError | Error | null
     data: any | null
   }>
   signOut: () => Promise<void>
@@ -44,10 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Don't try to get the session if the supabase client isn't ready
-    if (!supabase) return
+    if (!supabase) {
+      console.log("Supabase client not ready yet")
+      return
+    }
 
     const getSession = async () => {
       try {
+        console.log("Getting session...")
         const {
           data: { session },
           error,
@@ -59,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
+        console.log("Session retrieved:", session ? "Valid session" : "No session")
         setSession(session)
         setUser(session?.user ?? null)
 
@@ -79,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSession()
 
     try {
+      console.log("Setting up auth state change listener")
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -213,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { data, error: null }
     } catch (error) {
       console.error("Unexpected sign-up error:", error)
-      return { error, data: null }
+      return { error: error as Error, data: null }
     }
   }
 
@@ -223,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log("Signing in with email:", email)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -230,14 +237,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Sign-in error:", error)
+        return { error, data: null }
       } else {
         console.log("Sign-in successful:", data.user?.id)
+
+        // Ensure we have the user's profile
+        if (data.user) {
+          try {
+            await fetchProfile(data.user.id)
+          } catch (e) {
+            console.error("Error fetching profile after sign-in:", e)
+          }
+        }
       }
 
-      return { data, error }
+      return { data, error: null }
     } catch (error) {
       console.error("Unexpected sign-in error:", error)
-      return { error, data: null }
+      return { error: error as Error, data: null }
     }
   }
 
@@ -245,7 +262,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return
 
     try {
+      console.log("Signing out...")
       await supabase.auth.signOut()
+      setUser(null)
+      setSession(null)
+      setProfile(null)
       router.push("/login")
     } catch (error) {
       console.error("Sign-out error:", error)
