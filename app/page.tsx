@@ -3,14 +3,16 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useDemo } from "@/contexts/demo-context"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { PrinterIcon as Printer3d, Calculator, User, ArrowRight, CreditCard } from "lucide-react"
+import { PrinterIcon as Printer3d, Calculator, User, ArrowRight, CreditCard, PlayCircle } from "lucide-react"
 import Link from "next/link"
 
 export default function Home() {
   const { user, isLoading } = useAuth()
+  const { enterDemoMode } = useDemo()
   const router = useRouter()
 
   useEffect(() => {
@@ -51,11 +53,19 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 text-xl text-muted-foreground max-w-2xl">
-            Get accurate pricing estimates for your 3D printing projects with our advanced calculator. Sign up to access
-            our services and start creating today.
+            Get accurate pricing estimates for your 3D printing projects with our advanced calculator. Try our demo or
+            sign up to access all features.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              onClick={enterDemoMode}
+              size="lg"
+              className="bg-gradient-to-r from-cyber-purple to-cyber-blue hover:opacity-90 text-white btn-hover-effect"
+            >
+              <PlayCircle className="mr-2 h-5 w-5" />
+              Try Demo
+            </Button>
             <Button asChild size="lg" className="bg-cyber-blue hover:bg-cyber-blue/80 text-black btn-hover-effect">
               <Link href="/signup">
                 Create Account
