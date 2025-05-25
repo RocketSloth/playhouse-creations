@@ -10,6 +10,30 @@ import { ArrowRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function DemoCalculatorPage() {
+  const [isClient, setIsClient] = useState(false)
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false)
+
+  // Ensure this only runs on the client
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Don't render anything until we're on the client
+  if (!isClient) {
+    return (
+      <div className="h-[600px] flex items-center justify-center">
+        <div className="animate-pulse-slow text-cyber-blue">
+          <div className="h-16 w-16 border-4 border-t-transparent border-cyber-blue rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-center font-light tracking-wider">LOADING CALCULATOR...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <DemoCalculatorContent />
+}
+
+function DemoCalculatorContent() {
   const { exitDemoMode, demoStep } = useDemo()
   const router = useRouter()
   const [showSignupPrompt, setShowSignupPrompt] = useState(false)
