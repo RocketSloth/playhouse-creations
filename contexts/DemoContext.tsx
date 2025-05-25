@@ -111,5 +111,4 @@ export const useDemo = () => {
   return context
 }
 
-// Also export the DemoProvider as default
-export { DemoProvider as default }
+export default DemoProvider
